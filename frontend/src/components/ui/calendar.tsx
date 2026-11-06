@@ -1,214 +1,107 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, Clock, Sparkles, ArrowUpRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
-const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const dayNames = ["S", "M", "T", "W", "T", "F", "S"];
 
-const CalendarDay: React.FC<{ day: number | string; isHeader?: boolean; isToday?: boolean }> = ({
-  day,
-  isHeader,
-  isToday,
-}) => {
-  // Deterministic simulation for consistency heat: alternate between active solves
-  const hasSolved = !isHeader && (typeof day === "number" && (day % 3 === 0 || day % 5 === 0 || isToday));
-  
-  const cellStyle = isHeader
-    ? "text-slate-500 font-mono text-[10px]"
-    : isToday
-      ? "bg-[#0066FF] text-white font-medium shadow-[0_0_14px_rgba(0,102,255,0.5)]"
-      : hasSolved
-        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium"
-        : "text-slate-400 hover:bg-white/5 hover:text-white font-normal";
+// Deterministic solve counts per day, so the month reads like a real history.
+function solvesOn(day: number, today: number): number {
+  if (day > today) return -1; // future
+  if (day === today) return 1;
+  const v = Math.abs(Math.sin(day * 78.233) * 43758.5453) % 1;
+  if (v < 0.3) return 0;
+  return v < 0.6 ? 1 : v < 0.85 ? 2 : 3;
+}
 
-  return (
-    <div
-      className={`col-span-1 row-span-1 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg transition-all ${cellStyle}`}
-    >
-      <span className={`${isHeader ? "text-[10px]" : "text-xs"}`}>
-        {day}
-      </span>
-    </div>
-  );
-};
+const levelFor = (n: number) => (n <= 0 ? 0 : n === 1 ? 2 : n === 2 ? 3 : 4);
 
 export function Calendar({
   onOpenProblemModal,
-  className = ""
+  className = "",
 }: {
   onOpenProblemModal?: () => void;
   className?: string;
 }) {
-  const currentDate = new Date();
-  const currentMonth = currentDate.toLocaleString("default", { month: "long" });
-  const currentYear = currentDate.getFullYear();
-  const currentDayNum = currentDate.getDate();
-  const firstDayOfMonth = new Date(currentYear, currentDate.getMonth(), 1);
-  const firstDayOfWeek = firstDayOfMonth.getDay();
-  const daysInMonth = new Date(
-    currentYear,
-    currentDate.getMonth() + 1,
-    0
-  ).getDate();
+  const now = new Date();
+  const monthLabel = now.toLocaleString("en-US", { month: "long", year: "numeric" });
+  const today = now.getDate();
+  const firstDayOfWeek = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
-  const renderCalendarDays = () => {
-    let days: React.ReactNode[] = [
-      ...dayNames.map((day) => (
-        <CalendarDay key={`header-${day}`} day={day} isHeader />
-      )),
-      ...Array.from({ length: firstDayOfWeek }).map((_, i) => (
-        <div
-          key={`empty-start-${i}`}
-          className="col-span-1 row-span-1 h-7 w-7 sm:h-8 sm:w-8"
-        />
-      )),
-      ...Array.from({ length: daysInMonth }).map((_, i) => {
-        const dayNum = i + 1;
-        return (
-          <CalendarDay
-            key={`date-${dayNum}`}
-            day={dayNum}
-            isToday={dayNum === currentDayNum}
-          />
-        );
-      }),
-    ];
-
-    return days;
-  };
+  const days = Array.from({ length: daysInMonth }, (_, i) => {
+    const d = i + 1;
+    return { d, solves: solvesOn(d, today) };
+  });
+  const solvedDays = days.filter((x) => x.solves > 0).length;
 
   return (
-    <BentoCard height="h-auto" className={className}>
-      <div className="grid h-full gap-5">
-        
-        {/* Header Content */}
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0066FF]/10 border border-[#0066FF]/25 text-[11px] text-[#38bdf8] font-normal">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Daily LeetCode Track</span>
-          </div>
-
-          <h2 className="text-lg sm:text-xl font-medium text-white tracking-tight leading-snug">
-            Curated Day-by-Day Curriculum
-          </h2>
-          
-          <p className="text-xs sm:text-sm text-slate-400 font-normal leading-relaxed">
-            Stay on track with 2 daily problem recommendations tailored to your active syllabus module.
-          </p>
-
-          <Button
-            onClick={onOpenProblemModal}
-            className="mt-2 rounded-xl text-xs font-normal"
-          >
-            Start Today's Drill
-          </Button>
-        </div>
-
-        {/* Interactive Calendar Grid */}
-        <div className="w-full">
-          <div className="w-full rounded-2xl border border-white/10 bg-black/60 p-2 sm:p-3 transition-colors duration-200">
-            <div
-              className="rounded-xl border border-white/5 bg-[#070b12]/80 p-3 sm:p-4"
-              style={{ boxShadow: "0px 2px 8px 0px rgba(0,0,0,0.6) inset" }}
-            >
-              {/* Month & Sprint Info */}
-              <div className="flex items-center justify-between border-b border-white/5 pb-2.5 mb-3">
-                <div className="flex items-center gap-2">
-                  <CalendarIcon className="w-3.5 h-3.5 text-emerald-400" />
-                  <p className="text-xs sm:text-sm font-normal text-white font-mono">
-                    {currentMonth}, {currentYear}
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
-                  <Clock className="w-3 h-3 text-[#0066FF]" />
-                  <span>30 min drill</span>
-                </div>
-              </div>
-
-              {/* Day Grid */}
-              <div className="grid grid-cols-7 gap-1 sm:gap-1.5 place-items-center">
-                {renderCalendarDays()}
-              </div>
-
-              {/* Legend Indicator */}
-              <div className="flex items-center justify-between pt-3 mt-3 border-t border-white/5 text-[10px] text-slate-400 font-mono">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded bg-emerald-400" />
-                  Problems Solved
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded bg-[#0066FF]" />
-                  Today
-                </span>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </BentoCard>
-  );
-}
-
-export interface BentoCardProps {
-  children: React.ReactNode;
-  height?: string;
-  rowSpan?: number;
-  colSpan?: number;
-  className?: string;
-  showHoverGradient?: boolean;
-  hideOverflow?: boolean;
-  linkTo?: string;
-  onClick?: () => void;
-}
-
-export function BentoCard({
-  children,
-  height = "h-auto",
-  rowSpan = 8,
-  colSpan = 7,
-  className = "",
-  showHoverGradient = true,
-  hideOverflow = true,
-  linkTo,
-  onClick,
-}: BentoCardProps) {
-  const cardContent = (
-    <div
-      onClick={onClick}
-      className={`group relative flex flex-col rounded-3xl border border-white/[0.08] bg-black p-5 sm:p-6 transition-all duration-300 hover:border-white/20 ${
-        hideOverflow && "overflow-hidden"
-      } ${height} ${className}`}
+    <section
+      className={`flex flex-col rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-ink-850 p-6 ${className}`}
+      aria-label={`Solve calendar, ${monthLabel}`}
     >
-      {linkTo && (
-        <div className="absolute bottom-4 right-6 z-[999] flex h-10 w-10 rotate-6 items-center justify-center rounded-full bg-white opacity-0 transition-all duration-300 ease-in-out group-hover:translate-y-[-4px] group-hover:rotate-0 group-hover:opacity-100">
-          <ArrowUpRight className="h-5 w-5 text-black" />
-        </div>
-      )}
-      {showHoverGradient && (
-        <div className="pointer-events-none absolute inset-0 z-30 bg-gradient-to-tl from-emerald-500/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100" />
-      )}
-      {children}
-    </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <h3 className="text-[15px] font-medium text-slate-900 dark:text-white">{monthLabel}</h3>
+        <span className="font-mono text-[13px] tabular-nums text-slate-500 dark:text-slate-400">
+          {solvedDays} of {today} days
+        </span>
+      </div>
+
+      <div className="mt-6 grid grid-cols-7 gap-1.5">
+        {dayNames.map((d, i) => (
+          <span key={`h-${i}`} className="h-6 grid place-items-center font-mono text-[11px] text-slate-500">
+            {d}
+          </span>
+        ))}
+        {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+          <span key={`e-${i}`} aria-hidden />
+        ))}
+        {days.map(({ d, solves }) => {
+          const lvl = levelFor(solves);
+          const isToday = d === today;
+          const isFuture = solves < 0;
+          return (
+            <span
+              key={d}
+              title={isFuture ? undefined : `${solves} solved`}
+              data-level={lvl}
+              className={`cell !w-full !h-auto aspect-square !rounded-md grid place-items-center font-mono text-[11px] tabular-nums ${
+                isFuture
+                  ? "!bg-transparent text-slate-400 dark:text-slate-600"
+                  : lvl >= 3
+                    ? "text-white"
+                    : lvl > 0
+                      ? "text-slate-900 dark:text-white"
+                      : "text-slate-500"
+              } ${isToday ? "ring-1 ring-offset-2 ring-slate-900 dark:ring-white ring-offset-white dark:ring-offset-ink-850" : ""}`}
+            >
+              {d}
+            </span>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex items-center justify-end gap-1.5 font-mono text-[11px] text-slate-500">
+        <span className="mr-1">Less</span>
+        {[0, 2, 3, 4].map((l) => (
+          <span key={l} className="cell" data-level={l} aria-hidden />
+        ))}
+        <span className="ml-1">More</span>
+      </div>
+
+      <div className="mt-auto pt-6 border-t border-slate-200 dark:border-white/[0.06] flex items-center justify-between gap-4">
+        <p className="text-[13px] text-slate-500 dark:text-slate-400">2 problems picked from your current module</p>
+        <button
+          type="button"
+          onClick={onOpenProblemModal}
+          className="inline-flex items-center gap-1 flex-shrink-0 rounded-md text-[13px] text-brand-600 dark:text-brand-400 hover:underline underline-offset-4"
+        >
+          Start
+          <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+        </button>
+      </div>
+    </section>
   );
-
-  if (linkTo) {
-    return (
-      <a
-        href={linkTo}
-        target={linkTo.startsWith("http") ? "_blank" : undefined}
-        rel={linkTo.startsWith("http") ? "noopener noreferrer" : undefined}
-        className="block"
-      >
-        {cardContent}
-      </a>
-    );
-  }
-
-  return cardContent;
 }
 
 export default Calendar;

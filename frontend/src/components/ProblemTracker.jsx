@@ -1,268 +1,294 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Code2, Search, ExternalLink, Bookmark, BookmarkCheck,
-  CheckCircle2, HelpCircle, Eye, FileText, Filter,
-  Sparkles, Target, Zap, ShieldCheck, ArrowRight,
-  Database, Tag, BookOpen, Cpu
+  Search, ExternalLink, Bookmark, BookmarkCheck,
+  CheckCircle2, HelpCircle, Eye, Filter, Plus,
+  Code2, Tag, Clock, ArrowUpDown, Sparkles
 } from 'lucide-react';
+import { api } from '../services/api';
 
-export default function ProblemTracker({ setActiveTab }) {
-  const steps = [
-    {
-      num: '01',
-      title: "Log Your Attempt",
-      badge: "Ingestion",
-      icon: Code2,
-      color: "from-blue-500 to-indigo-500",
-      description: "After finishing a problem on LeetCode, HackerRank, or GFG, record the title, direct URL, difficulty tier (Easy, Medium, Hard), and core algorithmic topic.",
-      details: ["One-click problem ingestion", "Direct hyperlink preservation", "Categorized by topic & tag"]
-    },
-    {
-      num: '02',
-      title: "Tag Solve Independence",
-      badge: "Honesty Metric",
-      icon: ShieldCheck,
-      color: "from-emerald-500 to-teal-500",
-      description: "Be rigorously honest with yourself. Did you solve it 100% independently, with a subtle editorial hint, or after looking up the complete solution?",
-      details: ["Independently (Confidence)", "Needed Hint (Partial understanding)", "Looked at Solution (Requires review)"]
-    },
-    {
-      num: '03',
-      title: "Document Insights & Pitfalls",
-      badge: "Pattern Memory",
-      icon: FileText,
-      color: "from-purple-500 to-pink-500",
-      description: "Write down the key invariant, time/space complexity, and edge cases (e.g. empty lists, negative numbers, overflow). These notes serve as your pre-interview cheat sheet.",
-      details: ["Time & Space complexity notes", "Tricky edge cases caught", "Key algorithmic pattern identified"]
-    },
-    {
-      num: '04',
-      title: "Trigger Spaced Revision",
-      badge: "Long-Term Retention",
-      icon: BookmarkCheck,
-      color: "from-amber-500 to-rose-500",
-      description: "Flag any problem that felt challenging or required external help. It is instantly routed to the Revision Queue so you re-test yourself before real interviews.",
-      details: ["1-click bookmark flag", "Syncs directly to Revision Queue", "Prevents false sense of mastery"]
-    }
-  ];
+export default function ProblemTracker({ onOpenProblemModal, setActiveTab, onOpenCodeEditor }) {
+  const [problems, setProblems] = useState([]);
+  const [search, setSearch] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('All');
+  const [selectedTopic, setSelectedTopic] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [loading, setLoading] = useState(true);
 
-  const features = [
-    {
-      title: "Independence Metric",
-      icon: Target,
-      desc: "Distinguishes between genuine algorithmic mastery and superficial familiarity from reading editorials.",
-      tag: "Self-Assessment"
-    },
-    {
-      title: "Deep Multi-Filter",
-      icon: Filter,
-      desc: "Slice and dice your problem history by topic (Graphs, DP), difficulty tier, or honesty status in milliseconds.",
-      tag: "Organization"
-    },
-    {
-      title: "Quick-Recall Notes",
-      icon: BookOpen,
-      desc: "Keep concise markdown summaries of your mental approach so you can review 50 problems in under 30 minutes.",
-      tag: "Pre-Interview"
-    },
-    {
-      title: "Direct Platform Jump",
-      icon: ExternalLink,
-      desc: "Click any logged problem to jump straight back to its original LeetCode/GFG problem page with 0 friction.",
-      tag: "Workflow"
+  // Load problems from API / localStorage
+  const loadProblems = async () => {
+    try {
+      const data = await api.getProblems();
+      setProblems(data || []);
+    } catch (e) {
+      console.warn("Failed to load problems", e);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadProblems();
+  }, []);
+
+  const handleToggleRevision = async (id) => {
+    try {
+      await api.toggleRevision(id);
+      setProblems(prev =>
+        prev.map(p => (p.id === id ? { ...p, needsRevision: !p.needsRevision } : p))
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Filter problems based on search, difficulty, topic, status
+  const filteredProblems = problems.filter(p => {
+    const matchesSearch =
+      p.title?.toLowerCase().includes(search.toLowerCase()) ||
+      p.topic?.toLowerCase().includes(search.toLowerCase()) ||
+      (p.notes && p.notes.toLowerCase().includes(search.toLowerCase()));
+
+    const matchesDifficulty =
+      selectedDifficulty === 'All' || p.difficulty === selectedDifficulty;
+
+    const matchesTopic =
+      selectedTopic === 'All' || p.topic?.toLowerCase().includes(selectedTopic.toLowerCase());
+
+    const matchesStatus =
+      selectedStatus === 'All' ||
+      (selectedStatus === 'Independent' && p.solveStatus === 'Independently') ||
+      (selectedStatus === 'Hint Used' && p.solveStatus === 'Needed Hint') ||
+      (selectedStatus === 'Editorial' && p.solveStatus === 'Looked at Solution');
+
+    return matchesSearch && matchesDifficulty && matchesTopic && matchesStatus;
+  });
+
+  const topics = [
+    'All',
+    'Arrays',
+    'Two Pointers',
+    'Sliding Window',
+    'Stacks & Queues',
+    'Linked Lists',
+    'Trees',
+    'Graphs',
+    'Dynamic Programming'
   ];
 
   return (
-    <div className="space-y-10 pb-16">
-      {/* ── HEADER ── */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0c1222]/90 via-[#07090e]/95 to-black p-6 sm:p-10">
-        <div className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 bg-indigo-600/15 blur-[100px] rounded-full" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 w-80 h-80 bg-blue-500/10 blur-[90px] rounded-full" />
-
-        <div className="relative z-10 max-w-3xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-[#818cf8] text-xs font-semibold uppercase tracking-wider">
-            <Code2 className="w-3.5 h-3.5" />
-            <span>Problem Tracker &bull; Workflow & Guide</span>
+    <div className="space-y-6 pb-12">
+      {/* Header with Title and "Log New Problem" Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-[28px] sm:text-[32px] leading-[1.15] font-medium tracking-[-0.02em] text-slate-900 dark:text-white">
+              Problems
+            </h1>
           </div>
-
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-            How the <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-400 to-cyan-300">Problem Tracker</span> Works
-          </h1>
-
-          <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
-            The Problem Tracker is your searchable catalog of algorithmic problems. Rather than just collecting green checkmarks, it measures your real problem-solving independence and captures reusable patterns.
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Every problem you have logged, with how you solved it. Star the tricky ones to send them to revision.
           </p>
-
-          <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-slate-400">
-            <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/[0.04] border border-white/8">
-              <Database className="w-3.5 h-3.5 text-indigo-400" /> Centralized Solution Vault
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/[0.04] border border-white/8">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Independence Tracking
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/[0.04] border border-white/8">
-              <Tag className="w-3.5 h-3.5 text-pink-400" /> Topic & Pattern Taxonomy
-            </span>
-          </div>
         </div>
+
+        <button
+          onClick={onOpenProblemModal}
+          className="btn-primary-glow inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[10px] text-sm font-medium active:scale-[0.98]"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Log problem</span>
+        </button>
       </div>
 
-      {/* ── CORE WORKFLOW PIPELINE ── */}
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-white/10 pb-4">
-          <div>
-            <div className="text-xs uppercase tracking-widest font-bold text-indigo-400 mb-1">Step-by-Step Flow</div>
-            <h2 className="text-2xl font-bold text-white">Problem Ingestion & Analysis Workflow</h2>
+      {/* Filter and Search Bar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-ink-850 border border-slate-200 dark:border-white/[0.08] shadow-sm space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Search Box */}
+          <div className="relative sm:col-span-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/[0.08] text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+            />
           </div>
-          <p className="text-xs text-slate-400 max-w-sm">
-            How each solved algorithmic problem moves from raw practice into verified long-term interview readiness.
-          </p>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          {steps.map((step, idx) => {
-            const Icon = step.icon;
-            return (
-              <motion.div
-                key={step.num}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: idx * 0.08 }}
-                className="relative flex flex-col justify-between rounded-2xl border border-white/10 bg-[#0d121f]/80 p-6 backdrop-blur-sm hover:border-white/20 transition-all group"
+          {/* Difficulty Filter */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/[0.08]">
+            {['All', 'Easy', 'Medium', 'Hard'].map((diff) => (
+              <button
+                key={diff}
+                onClick={() => setSelectedDifficulty(diff)}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  selectedDifficulty === diff
+                    ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
               >
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-black font-mono text-slate-500 group-hover:text-indigo-400 transition-colors">
-                      {step.num}
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/10 text-slate-300">
-                      {step.badge}
-                    </span>
+                {diff}
+              </button>
+            ))}
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/[0.08]">
+            {['All', 'Independent', 'Hint Used', 'Editorial'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setSelectedStatus(status)}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  selectedStatus === status
+                    ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Topic Horizontal Filter Scroll */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none text-xs">
+          <span className="text-slate-400 font-medium whitespace-nowrap mr-1">Topic:</span>
+          {topics.map((t) => (
+            <button
+              key={t}
+              onClick={() => setSelectedTopic(t)}
+              className={`px-3 py-1 rounded-lg whitespace-nowrap transition-colors ${
+                selectedTopic === t
+                  ? 'bg-brand-500 text-white font-medium shadow-xs'
+                  : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Problem Grid */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
+          <span>Showing {filteredProblems.length} of {problems.length} Problems</span>
+        </div>
+
+        {filteredProblems.length === 0 ? (
+          <div className="p-12 text-center rounded-2xl bg-white dark:bg-black/60 border border-slate-200 dark:border-white/[0.08]">
+            <Code2 className="w-10 h-10 mx-auto text-slate-400 mb-2 stroke-[1.5]" />
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">No problems found</p>
+            <p className="text-xs text-slate-400 mt-1">Try adjusting your filters or log a new problem above.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {filteredProblems.map((p) => {
+              const isEasy = p.difficulty === 'Easy';
+              const isMed = p.difficulty === 'Medium';
+              const isHard = p.difficulty === 'Hard';
+
+              return (
+                <div
+                  key={p.id}
+                  className="p-4 rounded-2xl bg-white dark:bg-black/80 border border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.14] transition-colors shadow-xs flex flex-col justify-between gap-3 group"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Difficulty Badge */}
+                        <span
+                          className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md ${
+                            isEasy
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : isMed
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-rose-600 dark:text-rose-400'
+                          }`}
+                        >
+                          {p.difficulty}
+                        </span>
+
+                        {/* Topic Tag */}
+                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.08]">
+                          {p.topic}
+                        </span>
+
+                        {/* Solve Status Badge */}
+                        <span className="font-mono text-xs text-slate-500">
+                          {p.solveStatus === 'Independently' ? 'Independent' : p.solveStatus === 'Needed Hint' ? 'Needed Hint' : 'Editorial Solution'}
+                        </span>
+                      </div>
+
+                      {p.timeSpentMinutes && (
+                        <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
+                          <Clock className="w-3 h-3" />
+                          {p.timeSpentMinutes} min
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-base font-medium text-slate-900 dark:text-white ">
+                      {p.title}
+                    </h3>
+
+                    {p.notes && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 italic">
+                        "{p.notes}"
+                      </p>
+                    )}
                   </div>
 
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-tr ${step.color} p-0.5 shadow-lg`}>
-                    <div className="w-full h-full bg-[#0a0d14] rounded-[10px] flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-white" />
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5 text-xs">
+                    <button
+                      onClick={() => handleToggleRevision(p.id)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-colors ${
+                        p.needsRevision
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium'
+                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      {p.needsRevision ? (
+                        <>
+                          <BookmarkCheck className="w-3.5 h-3.5" />
+                          <span>In Revision Queue</span>
+                        </>
+                      ) : (
+                        <>
+                          <Bookmark className="w-3.5 h-3.5" />
+                          <span>Revise Later</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onOpenCodeEditor && onOpenCodeEditor(p)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 dark:text-brand-400 font-medium transition-colors"
+                        title="Open in built-in LeetCode workspace"
+                      >
+                        <Code2 className="w-3.5 h-3.5" />
+                        <span>Code</span>
+                      </button>
+
+                      {p.link && (
+                        <a
+                          href={p.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium"
+                          title="Open on LeetCode.com"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
                     </div>
                   </div>
-
-                  <h3 className="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors">
-                    {step.title}
-                  </h3>
-
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    {step.description}
-                  </p>
                 </div>
-
-                <div className="pt-5 mt-5 border-t border-white/5 space-y-1.5">
-                  {step.details.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-[11px] text-slate-400">
-                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-400/80" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── VISUAL BLUEPRINT / FLOW SCHEMATIC ── */}
-      <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-[#0a0f1d] to-[#06080d] p-6 sm:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Classification Pipeline</span>
-            <h3 className="text-xl font-bold text-white mt-1">Honesty-First Problem Logging</h3>
+              );
+            })}
           </div>
-          <span className="text-xs text-slate-400">Three outcomes dictate next study actions</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-5 rounded-2xl bg-emerald-500/[0.03] border border-emerald-500/20 space-y-3">
-            <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Independently Solved</span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              You derived the optimal approach and coded it with zero hints within the target time limit.
-            </p>
-            <div className="p-3 rounded-xl bg-black/40 border border-emerald-500/10 font-mono text-[11px] text-emerald-300">
-              <span className="text-slate-400">Status:</span> Mastered<br/>
-              <span className="text-slate-400">Action:</span> Feeds confidence score & analytics directly.
-            </div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-amber-500/[0.03] border border-amber-500/20 space-y-3">
-            <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm">
-              <HelpCircle className="w-4 h-4" />
-              <span>Needed Hint</span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              You needed a prompt (e.g. "Try using a monotonic stack" or "Think about two pointers").
-            </p>
-            <div className="p-3 rounded-xl bg-black/40 border border-amber-500/10 font-mono text-[11px] text-amber-300">
-              <span className="text-slate-400">Status:</span> Partial Recall<br/>
-              <span className="text-slate-400">Action:</span> Automatically added to 7-day revision queue.
-            </div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-rose-500/[0.03] border border-rose-500/20 space-y-3">
-            <div className="flex items-center gap-2 text-rose-400 font-semibold text-sm">
-              <Eye className="w-4 h-4" />
-              <span>Looked at Solution</span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              You got stuck and read the editorial or watched a video walkthrough to write the code.
-            </p>
-            <div className="p-3 rounded-xl bg-black/40 border border-rose-500/10 font-mono text-[11px] text-rose-300">
-              <span className="text-slate-400">Status:</span> Needs Active Practice<br/>
-              <span className="text-slate-400">Action:</span> High-priority flag in Revision Queue for Day 1 re-test.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── KEY CAPABILITIES ── */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-bold text-white">Problem Tracker Features & Capabilities</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {features.map((feat, i) => {
-            const Icon = feat.icon;
-            return (
-              <div key={i} className="p-5 rounded-2xl border border-white/10 bg-[#0e1322]/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5 rounded bg-white/5">
-                    {feat.tag}
-                  </span>
-                </div>
-                <h4 className="text-sm font-bold text-white pt-1">{feat.title}</h4>
-                <p className="text-xs text-slate-400 leading-relaxed">{feat.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── PRO INTERVIEW STRATEGY CALLOUT ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl border border-indigo-500/20 bg-indigo-950/20 text-slate-200">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400 flex-shrink-0">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div className="space-y-0.5">
-            <h4 className="text-sm font-bold text-white">The Power of Logging "Independence"</h4>
-            <p className="text-xs text-slate-400">
-              80% of candidates fail technical rounds because they practiced with hints and assumed they knew the pattern. Honest logging prevents this blindspot completely.
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

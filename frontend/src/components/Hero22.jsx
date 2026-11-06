@@ -12,7 +12,9 @@ export default function Hero22({
   onOpenProblemModal,
   onOpenAuthModal,
   setActiveTab,
-  currentUser
+  currentUser,
+  activeTab,
+  onNavigate
 }) {
   return (
     <AgencyHeroSection
@@ -21,8 +23,9 @@ export default function Hero22({
       onOpenTaskModal={onOpenTaskModal}
       onOpenProblemModal={onOpenProblemModal}
       onOpenAuthModal={onOpenAuthModal}
-      onNavigate={setActiveTab}
+      onNavigate={onNavigate || setActiveTab}
       currentUser={currentUser}
+      activeTab={activeTab}
     />
   );
 }

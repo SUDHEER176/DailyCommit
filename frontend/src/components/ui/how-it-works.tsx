@@ -194,8 +194,7 @@ export default function HowItWorks({
             marginTop: "4px",
           }}
         ></div>
-        <div className="from-background pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r"></div>
-        <div className="from-background pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l"></div>
+
 
         <div className="max-w-6xl mx-auto relative z-10">
           <div

@@ -1,111 +1,46 @@
 import React from 'react';
+import { BRAND } from '@/lib/brand';
 
 /**
- * ZeroHesitationLogo
- * Double chevron (>>) emblem with "Zero Hesitation" wordmark.
- * "Zero" = white, "Hesitation" = blue.
+ * Daily Commit mark: four heatmap cells, the newest one lit in the brand blue.
+ * It is the same cell the product uses to mark a solved day.
  */
-export const ZeroHesitationEmblem = ({ 
-  size = 36, 
-  className = "",
-  glow = true,
-  blueColor = "#1A8CFF",
-  whiteColor = "#FFFFFF" 
-}) => {
-  const height = size;
-  const width = Math.round(size * 1.45);
-
-  return (
-    <div 
-      className={`relative inline-flex items-center justify-center flex-shrink-0 select-none ${className}`}
-      style={{ width, height }}
-    >
-      {/* Ambient glow */}
-      {glow && (
-        <div 
-          className="absolute inset-0 rounded-full blur-md opacity-35 pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${blueColor} 0%, transparent 70%)` }}
-        />
-      )}
-
-      <svg
-        viewBox="0 0 58 38"
-        width={width}
-        height={height}
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="relative z-10 w-full h-full filter drop-shadow-[0_2px_12px_rgba(26,140,255,0.5)]"
-      >
-        <defs>
-          <linearGradient id="chevronLeftGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#8BBFFF" />
-            <stop offset="100%" stopColor="#5AA3FF" />
-          </linearGradient>
-          <linearGradient id="chevronRightGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={blueColor} />
-            <stop offset="100%" stopColor="#0055CC" />
-          </linearGradient>
-        </defs>
-
-        {/* Left chevron — lighter blue/white gradient */}
-        <path
-          d="M 2,3 L 19,19 L 2,35 L 10,35 L 27,19 L 10,3 Z"
-          fill="url(#chevronLeftGrad)"
-        />
-
-        {/* Right chevron — electric blue */}
-        <path
-          d="M 21,3 L 38,19 L 21,35 L 29,35 L 46,19 L 29,3 Z"
-          fill="url(#chevronRightGrad)"
-        />
-      </svg>
-    </div>
-  );
-};
+export const ZeroHesitationEmblem = ({ size = 20, className = '' }) => (
+  <svg
+    viewBox="0 0 20 20"
+    width={size}
+    height={size}
+    fill="none"
+    aria-hidden
+    className={`flex-shrink-0 ${className}`}
+  >
+    <rect x="1" y="1" width="8" height="8" rx="2" fill="currentColor" opacity="0.22" />
+    <rect x="11" y="1" width="8" height="8" rx="2" fill="currentColor" opacity="0.45" />
+    <rect x="1" y="11" width="8" height="8" rx="2" fill="currentColor" opacity="0.7" />
+    <rect x="11" y="11" width="8" height="8" rx="2" fill="#0066FF" />
+  </svg>
+);
 
 export default function ZeroHesitationLogo({
-  className = "",
-  size = 36,
+  className = '',
+  size = 20,
   showText = true,
-  textSize = "text-xl",
-  blueColor = "#1A8CFF",
-  textColor = "text-white",
-  animated = false,
+  textSize = 'text-[17px]',
+  textColor = 'text-slate-900 dark:text-white',
   badge = null,
   subtitle = null,
 }) {
   return (
-    <div className={`inline-flex items-center gap-3 select-none ${className}`}>
-      {/* Icon emblem */}
-      {size > 0 && (
-        <ZeroHesitationEmblem
-          size={size}
-          blueColor={blueColor}
-          className={animated ? "transition-transform hover:scale-105 duration-300" : ""}
-        />
-      )}
-
-      {/* Typography: "Zero Hesitation" */}
+    <div className={`inline-flex items-center gap-2 select-none ${textColor} ${className}`}>
+      {size > 0 && <ZeroHesitationEmblem size={Math.min(size, 22)} />}
       {showText && (
         <div className="flex flex-col justify-center leading-none">
           <div className="flex items-center gap-2 leading-none">
-            {/* "Zero" — white */}
-            <span className={`font-black italic tracking-tight font-sans ${textColor} ${textSize}`}>
-              Zero
-            </span>
-            {/* "Hesitation" — fully blue */}
-            <span
-              className={`font-black italic tracking-tight font-sans ${textSize} -ml-0.5`}
-              style={{ color: blueColor }}
-            >
-              Hesitation
-            </span>
-
+            <span className={`font-medium font-sans ${textSize}`}>{BRAND.name}</span>
             {badge}
           </div>
-
           {subtitle && (
-            <p className="text-[11px] text-slate-400 font-medium tracking-normal mt-1 leading-none hidden sm:block">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-none hidden sm:block">
               {subtitle}
             </p>
           )}

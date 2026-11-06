@@ -226,8 +226,6 @@ export default function DailyLeetCodeFeed({
           ))}
         </AnimatedList>
 
-        {/* Smooth Gradient Fade at Bottom */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black via-black/80 to-transparent" />
       </div>
     </div>
   );

@@ -1,0 +1,151 @@
+Week,Topic,#,Problem (opens LeetCode),Difficulty,Free link (premium only),Solution video (only after 20 min),Day 1 date,Time / Space,Pattern,Trigger line,Day 3 due,Day 3,Day 7 due,Day 7,Day 30 due,Day 30,Next re-solve,Status
+1,Arrays & Hashing,217,Contains Duplicate,Easy,,Watch,,,,,,,,,,,,Not started
+1,Arrays & Hashing,242,Valid Anagram,Easy,,Watch,,,,,,,,,,,,Not started
+1,Arrays & Hashing,1,Two Sum,Easy,,Watch,,,,,,,,,,,,Not started
+1,Arrays & Hashing,49,Group Anagrams,Medium,,Watch,,,,,,,,,,,,Not started
+1,Arrays & Hashing,347,Top K Frequent Elements,Medium,,Watch,,,,,,,,,,,,Not started
+1,Arrays & Hashing,238,Product of Array Except Self,Medium,,Watch,,,,,,,,,,,,Not started
+1,Arrays & Hashing,36,Valid Sudoku,Medium,,Watch,,,,,,,,,,,,Not started
+1,Arrays & Hashing,271,Encode and Decode Strings,Medium,Free version,Watch,,,,,,,,,,,,Not started
+1,Arrays & Hashing,128,Longest Consecutive Sequence,Medium,,Watch,,,,,,,,,,,,Not started
+1,Two Pointers,125,Valid Palindrome,Easy,,Watch,,,,,,,,,,,,Not started
+1,Two Pointers,167,Two Sum II (Input Array Is Sorted),Medium,,Watch,,,,,,,,,,,,Not started
+1,Two Pointers,15,3Sum,Medium,,Watch,,,,,,,,,,,,Not started
+1,Two Pointers,11,Container With Most Water,Medium,,Watch,,,,,,,,,,,,Not started
+1,Two Pointers,42,Trapping Rain Water,Hard,,Watch,,,,,,,,,,,,Not started
+2,Sliding Window,121,Best Time to Buy And Sell Stock,Easy,,Watch,,,,,,,,,,,,Not started
+2,Sliding Window,3,Longest Substring Without Repeating Characters,Medium,,Watch,,,,,,,,,,,,Not started
+2,Sliding Window,424,Longest Repeating Character Replacement,Medium,,Watch,,,,,,,,,,,,Not started
+2,Sliding Window,567,Permutation In String,Medium,,Watch,,,,,,,,,,,,Not started
+2,Sliding Window,76,Minimum Window Substring,Hard,,Watch,,,,,,,,,,,,Not started
+2,Sliding Window,239,Sliding Window Maximum,Hard,,Watch,,,,,,,,,,,,Not started
+2,Stack,20,Valid Parentheses,Easy,,Watch,,,,,,,,,,,,Not started
+2,Stack,155,Min Stack,Medium,,Watch,,,,,,,,,,,,Not started
+2,Stack,150,Evaluate Reverse Polish Notation,Medium,,Watch,,,,,,,,,,,,Not started
+2,Stack,22,Generate Parentheses,Medium,,Watch,,,,,,,,,,,,Not started
+2,Stack,739,Daily Temperatures,Medium,,Watch,,,,,,,,,,,,Not started
+2,Stack,853,Car Fleet,Medium,,Watch,,,,,,,,,,,,Not started
+2,Stack,84,Largest Rectangle In Histogram,Hard,,Watch,,,,,,,,,,,,Not started
+3,Binary Search,704,Binary Search,Easy,,Watch,,,,,,,,,,,,Not started
+3,Binary Search,74,Search a 2D Matrix,Medium,,Watch,,,,,,,,,,,,Not started
+3,Binary Search,875,Koko Eating Bananas,Medium,,Watch,,,,,,,,,,,,Not started
+3,Binary Search,153,Find Minimum In Rotated Sorted Array,Medium,,Watch,,,,,,,,,,,,Not started
+3,Binary Search,33,Search In Rotated Sorted Array,Medium,,Watch,,,,,,,,,,,,Not started
+3,Binary Search,981,Time Based Key-Value Store,Medium,,Watch,,,,,,,,,,,,Not started
+3,Binary Search,4,Median of Two Sorted Arrays,Hard,,Watch,,,,,,,,,,,,Not started
+3,Intervals,252,Meeting Rooms,Easy,Free version,Watch,,,,,,,,,,,,Not started
+3,Intervals,57,Insert Interval,Medium,,Watch,,,,,,,,,,,,Not started
+3,Intervals,56,Merge Intervals,Medium,,Watch,,,,,,,,,,,,Not started
+3,Intervals,435,Non-overlapping Intervals,Medium,,Watch,,,,,,,,,,,,Not started
+3,Intervals,253,Meeting Rooms II,Medium,Free version,Watch,,,,,,,,,,,,Not started
+3,Intervals,1851,Minimum Interval to Include Each Query,Hard,,Watch,,,,,,,,,,,,Not started
+4,Linked List,206,Reverse Linked List,Easy,,Watch,,,,,,,,,,,,Not started
+4,Linked List,21,Merge Two Sorted Lists,Easy,,Watch,,,,,,,,,,,,Not started
+4,Linked List,141,Linked List Cycle,Easy,,Watch,,,,,,,,,,,,Not started
+4,Linked List,143,Reorder List,Medium,,Watch,,,,,,,,,,,,Not started
+4,Linked List,19,Remove Nth Node From End of List,Medium,,Watch,,,,,,,,,,,,Not started
+4,Linked List,138,Copy List With Random Pointer,Medium,,Watch,,,,,,,,,,,,Not started
+4,Linked List,2,Add Two Numbers,Medium,,Watch,,,,,,,,,,,,Not started
+4,Linked List,287,Find The Duplicate Number,Medium,,Watch,,,,,,,,,,,,Not started
+4,Linked List,146,LRU Cache,Medium,,Watch,,,,,,,,,,,,Not started
+4,Linked List,23,Merge k Sorted Lists,Hard,,Watch,,,,,,,,,,,,Not started
+4,Linked List,25,Reverse Nodes in k-Group,Hard,,Watch,,,,,,,,,,,,Not started
+5,Trees,226,Invert Binary Tree,Easy,,Watch,,,,,,,,,,,,Not started
+5,Trees,104,Maximum Depth of Binary Tree,Easy,,Watch,,,,,,,,,,,,Not started
+5,Trees,543,Diameter of Binary Tree,Easy,,Watch,,,,,,,,,,,,Not started
+5,Trees,110,Balanced Binary Tree,Easy,,Watch,,,,,,,,,,,,Not started
+5,Trees,100,Same Tree,Easy,,Watch,,,,,,,,,,,,Not started
+5,Trees,572,Subtree of Another Tree,Easy,,Watch,,,,,,,,,,,,Not started
+5,Trees,235,Lowest Common Ancestor of a Binary Search Tree,Medium,,Watch,,,,,,,,,,,,Not started
+5,Trees,102,Binary Tree Level Order Traversal,Medium,,Watch,,,,,,,,,,,,Not started
+5,Trees,199,Binary Tree Right Side View,Medium,,Watch,,,,,,,,,,,,Not started
+5,Trees,1448,Count Good Nodes In Binary Tree,Medium,,Watch,,,,,,,,,,,,Not started
+5,Trees,98,Validate Binary Search Tree,Medium,,Watch,,,,,,,,,,,,Not started
+5,Trees,230,Kth Smallest Element in a BST,Medium,,Watch,,,,,,,,,,,,Not started
+5,Trees,105,Construct Binary Tree From Preorder And Inorder Traversal,Medium,,Watch,,,,,,,,,,,,Not started
+5,Trees,124,Binary Tree Maximum Path Sum,Hard,,Watch,,,,,,,,,,,,Not started
+5,Trees,297,Serialize And Deserialize Binary Tree,Hard,,Watch,,,,,,,,,,,,Not started
+6,Heap / Priority Queue,703,Kth Largest Element In a Stream,Easy,,Watch,,,,,,,,,,,,Not started
+6,Heap / Priority Queue,1046,Last Stone Weight,Easy,,Watch,,,,,,,,,,,,Not started
+6,Heap / Priority Queue,973,K Closest Points to Origin,Medium,,Watch,,,,,,,,,,,,Not started
+6,Heap / Priority Queue,215,Kth Largest Element In An Array,Medium,,Watch,,,,,,,,,,,,Not started
+6,Heap / Priority Queue,621,Task Scheduler,Medium,,Watch,,,,,,,,,,,,Not started
+6,Heap / Priority Queue,355,Design Twitter,Medium,,Watch,,,,,,,,,,,,Not started
+6,Heap / Priority Queue,295,Find Median From Data Stream,Hard,,Watch,,,,,,,,,,,,Not started
+6,Greedy,53,Maximum Subarray,Medium,,Watch,,,,,,,,,,,,Not started
+6,Greedy,55,Jump Game,Medium,,Watch,,,,,,,,,,,,Not started
+6,Greedy,45,Jump Game II,Medium,,Watch,,,,,,,,,,,,Not started
+6,Greedy,134,Gas Station,Medium,,Watch,,,,,,,,,,,,Not started
+6,Greedy,846,Hand of Straights,Medium,,Watch,,,,,,,,,,,,Not started
+6,Greedy,1899,Merge Triplets to Form Target Triplet,Medium,,Watch,,,,,,,,,,,,Not started
+6,Greedy,763,Partition Labels,Medium,,Watch,,,,,,,,,,,,Not started
+6,Greedy,678,Valid Parenthesis String,Medium,,Watch,,,,,,,,,,,,Not started
+7,Backtracking,78,Subsets,Medium,,Watch,,,,,,,,,,,,Not started
+7,Backtracking,39,Combination Sum,Medium,,Watch,,,,,,,,,,,,Not started
+7,Backtracking,46,Permutations,Medium,,Watch,,,,,,,,,,,,Not started
+7,Backtracking,90,Subsets II,Medium,,Watch,,,,,,,,,,,,Not started
+7,Backtracking,40,Combination Sum II,Medium,,Watch,,,,,,,,,,,,Not started
+7,Backtracking,79,Word Search,Medium,,Watch,,,,,,,,,,,,Not started
+7,Backtracking,131,Palindrome Partitioning,Medium,,Watch,,,,,,,,,,,,Not started
+7,Backtracking,17,Letter Combinations of a Phone Number,Medium,,Watch,,,,,,,,,,,,Not started
+7,Backtracking,51,N-Queens,Hard,,Watch,,,,,,,,,,,,Not started
+7,Tries,208,Implement Trie (Prefix Tree),Medium,,Watch,,,,,,,,,,,,Not started
+7,Tries,211,Design Add And Search Words Data Structure,Medium,,Watch,,,,,,,,,,,,Not started
+7,Tries,212,Word Search II,Hard,,Watch,,,,,,,,,,,,Not started
+8,Graphs,200,Number of Islands,Medium,,Watch,,,,,,,,,,,,Not started
+8,Graphs,133,Clone Graph,Medium,,Watch,,,,,,,,,,,,Not started
+8,Graphs,695,Max Area of Island,Medium,,Watch,,,,,,,,,,,,Not started
+8,Graphs,417,Pacific Atlantic Water Flow,Medium,,Watch,,,,,,,,,,,,Not started
+8,Graphs,130,Surrounded Regions,Medium,,Watch,,,,,,,,,,,,Not started
+8,Graphs,994,Rotting Oranges,Medium,,Watch,,,,,,,,,,,,Not started
+8,Graphs,286,Walls And Gates,Medium,Free version,Watch,,,,,,,,,,,,Not started
+8,Graphs,207,Course Schedule,Medium,,Watch,,,,,,,,,,,,Not started
+8,Graphs,210,Course Schedule II,Medium,,Watch,,,,,,,,,,,,Not started
+8,Graphs,684,Redundant Connection,Medium,,Watch,,,,,,,,,,,,Not started
+8,Graphs,323,Number of Connected Components In An Undirected Graph,Medium,Free version,Watch,,,,,,,,,,,,Not started
+8,Graphs,261,Graph Valid Tree,Medium,Free version,Watch,,,,,,,,,,,,Not started
+8,Graphs,127,Word Ladder,Hard,,Watch,,,,,,,,,,,,Not started
+9,Advanced Graphs,1584,Min Cost to Connect All Points,Medium,,Watch,,,,,,,,,,,,Not started
+9,Advanced Graphs,743,Network Delay Time,Medium,,Watch,,,,,,,,,,,,Not started
+9,Advanced Graphs,787,Cheapest Flights Within K Stops,Medium,,Watch,,,,,,,,,,,,Not started
+9,Advanced Graphs,332,Reconstruct Itinerary,Hard,,Watch,,,,,,,,,,,,Not started
+9,Advanced Graphs,778,Swim In Rising Water,Hard,,Watch,,,,,,,,,,,,Not started
+9,Advanced Graphs,269,Alien Dictionary,Hard,Free version,Watch,,,,,,,,,,,,Not started
+9,Math & Geometry,202,Happy Number,Easy,,Watch,,,,,,,,,,,,Not started
+9,Math & Geometry,66,Plus One,Easy,,Watch,,,,,,,,,,,,Not started
+9,Math & Geometry,48,Rotate Image,Medium,,Watch,,,,,,,,,,,,Not started
+9,Math & Geometry,54,Spiral Matrix,Medium,,Watch,,,,,,,,,,,,Not started
+9,Math & Geometry,73,Set Matrix Zeroes,Medium,,Watch,,,,,,,,,,,,Not started
+9,Math & Geometry,50,"Pow(x, n)",Medium,,Watch,,,,,,,,,,,,Not started
+9,Math & Geometry,43,Multiply Strings,Medium,,Watch,,,,,,,,,,,,Not started
+9,Math & Geometry,2013,Detect Squares,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,70,Climbing Stairs,Easy,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,746,Min Cost Climbing Stairs,Easy,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,198,House Robber,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,213,House Robber II,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,5,Longest Palindromic Substring,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,647,Palindromic Substrings,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,91,Decode Ways,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,322,Coin Change,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,152,Maximum Product Subarray,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,139,Word Break,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,300,Longest Increasing Subsequence,Medium,,Watch,,,,,,,,,,,,Not started
+10,1-D Dynamic Programming,416,Partition Equal Subset Sum,Medium,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,62,Unique Paths,Medium,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,1143,Longest Common Subsequence,Medium,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,309,Best Time to Buy And Sell Stock With Cooldown,Medium,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,518,Coin Change II,Medium,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,494,Target Sum,Medium,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,97,Interleaving String,Medium,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,72,Edit Distance,Medium,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,329,Longest Increasing Path In a Matrix,Hard,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,115,Distinct Subsequences,Hard,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,312,Burst Balloons,Hard,,Watch,,,,,,,,,,,,Not started
+11,2-D Dynamic Programming,10,Regular Expression Matching,Hard,,Watch,,,,,,,,,,,,Not started
+12,Bit Manipulation,136,Single Number,Easy,,Watch,,,,,,,,,,,,Not started
+12,Bit Manipulation,191,Number of 1 Bits,Easy,,Watch,,,,,,,,,,,,Not started
+12,Bit Manipulation,338,Counting Bits,Easy,,Watch,,,,,,,,,,,,Not started
+12,Bit Manipulation,190,Reverse Bits,Easy,,Watch,,,,,,,,,,,,Not started
+12,Bit Manipulation,268,Missing Number,Easy,,Watch,,,,,,,,,,,,Not started
+12,Bit Manipulation,371,Sum of Two Integers,Medium,,Watch,,,,,,,,,,,,Not started
+12,Bit Manipulation,7,Reverse Integer,Medium,,Watch,,,,,,,,,,,,Not started

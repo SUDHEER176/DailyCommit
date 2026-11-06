@@ -1,233 +1,141 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { BRAND } from '@/lib/brand';
+
+const EASE = [0.22, 1, 0.36, 1];
 
 /**
- * Mini Circular Dial for Ledger Rows
+ * Readiness dial: the outer ring is the current sprint, the inner ring the baseline it is compared with.
  */
-const MiniDial = ({ percentage = 80, size = 38, strokeWidth = 3 }) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+const CoverageDial = ({ percentage = 82, baseline = 54 }) => {
+  const size = 280;
+  const outer = { r: 120, w: 10 };
+  const inner = { r: 100, w: 4 };
+  const circ = (r) => 2 * Math.PI * r;
 
   return (
-    <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="rotate-[-90deg]">
-        {/* Background Track */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="rgba(255, 255, 255, 0.1)"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        {/* Active Green Arc */}
-        <motion.circle
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#10b981"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeLinecap="round"
-          fill="none"
-        />
-      </svg>
-    </div>
-  );
-};
-
-/**
- * Large Double Coverage Dial for the Main Stat (Emerald Green Accent)
- */
-const CoverageDial = ({ percentage = 82, innerPercentage = 54, size = 320 }) => {
-  const strokeWidth = 14;
-  const innerStrokeWidth = 7;
-  
-  const outerRadius = 120;
-  const outerCircumference = 2 * Math.PI * outerRadius;
-  const outerOffset = outerCircumference - (percentage / 100) * outerCircumference;
-
-  const innerRadius = 96;
-  const innerCircumference = 2 * Math.PI * innerRadius;
-  const innerOffset = innerCircumference - (innerPercentage / 100) * innerCircumference;
-
-  return (
-    <div className="relative flex flex-col items-center justify-center">
-      <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-        <svg width={size} height={size} viewBox="0 0 320 320" className="rotate-[-90deg]">
-          
-          {/* Inner Dial Track & Arc */}
-          <circle
-            cx="160"
-            cy="160"
-            r={innerRadius}
-            stroke="rgba(255, 255, 255, 0.08)"
-            strokeWidth={innerStrokeWidth}
-            fill="none"
-          />
+    <figure className="flex flex-col items-center">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox="0 0 280 280" className="-rotate-90" aria-hidden>
+          <circle cx="140" cy="140" r={inner.r} fill="none" strokeWidth={inner.w} className="stroke-slate-200 dark:stroke-white/[0.06]" />
           <motion.circle
-            initial={{ strokeDashoffset: innerCircumference }}
-            animate={{ strokeDashoffset: innerOffset }}
-            transition={{ duration: 1.4, ease: "easeOut", delay: 0.1 }}
-            cx="160"
-            cy="160"
-            r={innerRadius}
-            stroke="rgba(255, 255, 255, 0.35)"
-            strokeWidth={innerStrokeWidth}
-            strokeDasharray={innerCircumference}
-            strokeLinecap="round"
-            fill="none"
+            cx="140" cy="140" r={inner.r} fill="none" strokeWidth={inner.w} strokeLinecap="round"
+            className="stroke-slate-400 dark:stroke-slate-500"
+            strokeDasharray={circ(inner.r)}
+            initial={{ strokeDashoffset: circ(inner.r) }}
+            whileInView={{ strokeDashoffset: circ(inner.r) * (1 - baseline / 100) }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, ease: EASE }}
           />
-
-          {/* Outer Dial Track & Active Emerald Green Arc */}
-          <circle
-            cx="160"
-            cy="160"
-            r={outerRadius}
-            stroke="rgba(255, 255, 255, 0.08)"
-            strokeWidth={strokeWidth}
-            fill="none"
-          />
+          <circle cx="140" cy="140" r={outer.r} fill="none" strokeWidth={outer.w} className="stroke-slate-200 dark:stroke-white/[0.06]" />
           <motion.circle
-            initial={{ strokeDashoffset: outerCircumference }}
-            animate={{ strokeDashoffset: outerOffset }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
-            cx="160"
-            cy="160"
-            r={outerRadius}
-            stroke="#10b981"
-            strokeWidth={strokeWidth}
-            strokeDasharray={outerCircumference}
-            strokeLinecap="round"
-            fill="none"
-            style={{ filter: "drop-shadow(0 0 12px rgba(16, 185, 129, 0.4))" }}
+            cx="140" cy="140" r={outer.r} fill="none" strokeWidth={outer.w} strokeLinecap="round"
+            stroke="#0066FF"
+            strokeDasharray={circ(outer.r)}
+            initial={{ strokeDashoffset: circ(outer.r) }}
+            whileInView={{ strokeDashoffset: circ(outer.r) * (1 - percentage / 100) }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.1, ease: EASE }}
           />
         </svg>
-
-        {/* Center Percentage Display */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 select-none pointer-events-none">
-          <div className="flex items-baseline justify-center font-mono">
-            <span className="text-5xl sm:text-6xl font-medium text-emerald-400 tracking-tight">
-              {percentage}
-            </span>
-            <span className="text-2xl sm:text-3xl font-medium text-emerald-400/80 ml-1">
-              %
-            </span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <div className="font-mono tabular-nums text-slate-900 dark:text-white">
+            <span className="text-[56px] leading-none font-medium">{percentage}</span>
+            <span className="text-2xl text-slate-500">%</span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-[170px] mt-1 leading-snug font-normal">
-            of core interview patterns mastered unattended
+          <p className="mt-2 max-w-[160px] text-[13px] leading-5 text-slate-500 dark:text-slate-400">
+            of core interview patterns mastered
           </p>
         </div>
       </div>
 
-      {/* Legend & Metadata below the dial */}
-      <div className="mt-4 space-y-1.5 text-center">
-        <div className="flex items-center justify-center gap-5 text-xs text-slate-300 font-mono">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-            Active Sprints · {percentage}%
+      <figcaption className="mt-6 flex flex-col items-center gap-2">
+        <div className="flex items-center gap-6 text-[13px] text-slate-600 dark:text-slate-300">
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-sm bg-brand-500" aria-hidden />
+            This sprint <span className="font-mono tabular-nums">{percentage}%</span>
           </span>
-          <span className="flex items-center gap-1.5 text-slate-500">
-            <span className="w-2 h-2 rounded-full bg-slate-500" />
-            Baseline · {innerPercentage}%
+          <span className="flex items-center gap-2 text-slate-500">
+            <span className="w-2 h-2 rounded-sm bg-slate-400 dark:bg-slate-500" aria-hidden />
+            Baseline <span className="font-mono tabular-nums">{baseline}%</span>
           </span>
         </div>
-        <p className="text-[11px] text-slate-500 font-normal">
-          Measured across 84 placement-ready interview problems
-        </p>
-      </div>
-    </div>
+        <p className="text-xs text-slate-500">Measured across 84 interview problems</p>
+      </figcaption>
+    </figure>
   );
 };
 
-/**
- * Stats 15 Block (React Bits Pro)
- * Coverage dial with an automation ledger
- */
-export default function Stats15({
-  stats = {},
-  setActiveTab = () => {},
-}) {
+export default function Stats15({ stats = {}, setActiveTab = () => {} }) {
   const readinessScore = stats.readinessScore || 82;
 
   const ledgerItems = [
     {
-      title: "Pattern drills & core algorithms",
-      subtitle: "Daily LeetCode medium & hard patterns, tracked automatically",
-      percentage: stats.difficultyCounts ? Math.min(100, Math.round(((stats.difficultyCounts.Medium + stats.difficultyCounts.Hard) / 25) * 100)) : 94,
-      targetTab: "problems",
+      title: 'Pattern drills',
+      subtitle: 'Medium and hard problems rotated into each day',
+      percentage: stats.difficultyCounts
+        ? Math.min(100, Math.round(((stats.difficultyCounts.Medium + stats.difficultyCounts.Hard) / 25) * 100))
+        : 94,
+      targetTab: 'problems',
     },
     {
-      title: "Spaced repetition recall",
-      subtitle: "Optimal intervals, hint-assisted solutions reviewed automatically",
+      title: 'Spaced revision',
+      subtitle: 'Problems you needed a hint for, reviewed on schedule',
       percentage: 78,
-      targetTab: "revision",
+      targetTab: 'revision',
     },
     {
-      title: "Roadmap syllabus milestones",
-      subtitle: "6-week structured placement checkpoints with live verification",
+      title: 'Roadmap milestones',
+      subtitle: 'Six weekly checkpoints, checked as you finish topics',
       percentage: stats.roadmapProgress || 86,
-      targetTab: "roadmap",
+      targetTab: 'roadmap',
     },
   ];
 
   return (
-    <section className="w-full rounded-3xl bg-black border border-white/10 p-6 sm:p-12 lg:p-14 shadow-2xl">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-        
-        {/* Left 7 Cols: Heading & Automation Ledger */}
-        <div className="lg:col-span-7 space-y-8">
-          
-          {/* Main Heading & Intro */}
-          <div className="space-y-3 max-w-xl">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-medium text-white tracking-tight leading-tight">
-              The prep work now runs itself.
-            </h2>
-            <p className="text-slate-400 text-sm sm:text-base leading-relaxed font-normal">
-              CodeStreak algorithms pick up the recurring study work: daily problem rotations, spaced revisions, roadmap validations, and leave an interview-ready mastery trail you can rely on.
-            </p>
-          </div>
+    <section className="relative w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+        <div className="lg:col-span-7">
+          <span className="eyebrow">Scheduling</span>
+          <h2 className="mt-3 text-[32px] sm:text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-slate-900 dark:text-white max-w-xl">
+            Every session starts with a list, not a decision
+          </h2>
+          <p className="mt-4 max-w-xl text-base leading-[1.6] text-slate-600 dark:text-slate-400">
+            {BRAND.name} rotates the day’s problems, schedules revisions and checks roadmap milestones,
+            so you spend the hour solving instead of choosing what to solve.
+          </p>
 
-          {/* Automation Ledger List */}
-          <div className="border-t border-white/10 divide-y divide-white/10">
-            {ledgerItems.map((item, idx) => (
-              <div 
-                key={idx}
-                onClick={() => setActiveTab(item.targetTab)}
-                className="py-4 sm:py-5 flex items-center justify-between gap-4 group hover:bg-white/[0.04] transition-colors -mx-2 px-3 rounded-xl cursor-pointer"
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <MiniDial percentage={item.percentage} />
-                  
-                  <div className="min-w-0">
-                    <h3 className="text-sm sm:text-base font-medium text-white group-hover:text-emerald-400 transition-colors truncate">
+          <ul className="mt-10 border-t border-slate-200 dark:border-white/[0.08]">
+            {ledgerItems.map((item) => (
+              <li key={item.title} className="border-b border-slate-200 dark:border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(item.targetTab)}
+                  className="group w-full grid grid-cols-[minmax(0,1fr)_120px_48px] items-center gap-6 py-4 text-left rounded-lg"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[15px] text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                       {item.title}
-                    </h3>
-                    <p className="text-xs text-slate-400 truncate mt-0.5 font-normal">
+                    </span>
+                    <span className="block mt-1 text-[13px] text-slate-500 dark:text-slate-400 truncate">
                       {item.subtitle}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-baseline font-mono text-base sm:text-lg font-medium text-white flex-shrink-0 pl-2">
-                  <span className="text-emerald-400">{item.percentage}</span>
-                  <span className="text-xs text-slate-400 font-normal ml-0.5">%</span>
-                </div>
-              </div>
+                    </span>
+                  </span>
+                  <span className="h-1 rounded-full bg-slate-200 dark:bg-white/[0.06] overflow-hidden" aria-hidden>
+                    <span className="block h-full rounded-full bg-slate-400 dark:bg-slate-500" style={{ width: `${item.percentage}%` }} />
+                  </span>
+                  <span className="font-mono text-[15px] tabular-nums text-right text-slate-900 dark:text-white">
+                    {item.percentage}%
+                  </span>
+                </button>
+              </li>
             ))}
-          </div>
-
+          </ul>
         </div>
 
-        {/* Right 5 Cols: Large Double Coverage Dial */}
-        <div className="lg:col-span-5 flex items-center justify-center">
-          <CoverageDial percentage={readinessScore} innerPercentage={54} />
+        <div className="lg:col-span-5 flex justify-center">
+          <CoverageDial percentage={readinessScore} baseline={54} />
         </div>
-
       </div>
     </section>
   );

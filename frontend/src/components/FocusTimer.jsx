@@ -55,38 +55,38 @@ export default function FocusTimer({ isOpen, onClose, onFinishSprint }) {
 
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-fadeIn">
-      <div className="glass-panel p-5 rounded-3xl border border-brand-500/30 shadow-2xl w-80 space-y-4 bg-dark-950/95 backdrop-blur-2xl">
+      <div className="surface-highlight animate-modalIn glass-panel p-5 rounded-2xl border border-brand-500/30 shadow-sm w-80 space-y-4 bg-white/95 dark:bg-ink-950/95 text-slate-900 dark:text-white">
         
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-brand-400">
-            <Timer className="w-4 h-4 animate-pulse" />
-            <span className="text-xs font-extrabold uppercase tracking-wider">DSA Sprint Focus</span>
+          <div className="flex items-center gap-2 text-brand-500 dark:text-brand-400">
+            <Timer className="w-4 h-4" />
+            <span className="text-xs font-medium">DSA Sprint Focus</span>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-sm">
+          <button onClick={onClose} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Big Time Display */}
         <div className="text-center py-2">
-          <div className="text-5xl font-black text-white font-mono tracking-tighter">
+          <div className="text-5xl font-medium text-slate-900 dark:text-white font-mono tabular-nums">
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
-            {isActive ? "Problem Sprint in Progress... Keep coding!" : "Ready for your next DSA problem"}
+            {isActive ? "Sprint running" : "Ready when you are"}
           </p>
         </div>
 
         {/* Preset Selector */}
-        <div className="grid grid-cols-3 gap-1.5 p-1 bg-dark-900 rounded-xl border border-white/5">
+        <div className="grid grid-cols-3 gap-1.5 p-1 bg-ink-900 rounded-xl border border-white/5">
           {[25, 45, 60].map((m) => (
             <button
               key={m}
               onClick={() => setPreset(m)}
-              className={`py-1 text-xs font-bold rounded-lg transition-all ${
+              className={`py-1 text-xs font-medium rounded-lg transition-colors ${
                 initialMinutes === m 
-                  ? 'bg-brand-500 text-dark-950 font-extrabold shadow-sm' 
+                  ? 'bg-brand-500 text-ink-950 font-medium shadow-sm' 
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -99,7 +99,7 @@ export default function FocusTimer({ isOpen, onClose, onFinishSprint }) {
         <div className="flex items-center justify-between gap-2 pt-1">
           <button
             onClick={resetTimer}
-            className="p-2.5 rounded-xl bg-dark-900 hover:bg-dark-850 text-slate-400 hover:text-white border border-white/5"
+            className="p-2.5 rounded-xl bg-ink-900 hover:bg-ink-850 text-slate-400 hover:text-white border border-white/5"
             title="Reset"
           >
             <RotateCcw className="w-4 h-4" />
@@ -107,21 +107,21 @@ export default function FocusTimer({ isOpen, onClose, onFinishSprint }) {
 
           <button
             onClick={toggleTimer}
-            className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+            className={`flex-1 py-2.5 px-4 rounded-xl font-medium text-xs flex items-center justify-center gap-2 transition-colors ${
               isActive 
-                ? 'bg-amber-500 hover:bg-amber-400 text-dark-950' 
-                : 'bg-brand-500 hover:bg-brand-400 text-dark-950 shadow-glow-emerald'
+                ? 'bg-amber-500 hover:bg-amber-400 text-ink-950' 
+                : 'bg-brand-500 hover:bg-brand-400 text-ink-950'
             }`}
           >
             {isActive ? (
               <>
-                <Pause className="w-4 h-4 fill-dark-950" />
-                <span>Pause Sprint</span>
+                <Pause className="w-4 h-4 fill-ink-950" />
+                <span>Pause</span>
               </>
             ) : (
               <>
-                <Play className="w-4 h-4 fill-dark-950" />
-                <span>Start Sprint</span>
+                <Play className="w-4 h-4 fill-ink-950" />
+                <span>Start</span>
               </>
             )}
           </button>

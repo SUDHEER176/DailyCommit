@@ -3,15 +3,42 @@ import Navbar, { navTabs } from './components/Navbar';
 import BottomNavBar from './components/ui/bottom-nav-bar';
 import Dashboard from './components/Dashboard';
 import FocusTimer from './components/FocusTimer';
-import AddTaskModal from './components/AddTaskModal';
-import AddProblemModal from './components/AddProblemModal';
-import AuthModal from './components/AuthModal';
+import { AddTaskModal, AddProblemModal, AuthModal } from './components/modals';
 import Footer from './components/Footer';
-import Particles from './components/reactbits/Particles';
 import { api } from './services/api';
 
+import DailyPlanner from './components/DailyPlanner';
+import ProblemTracker from './components/ProblemTracker';
+import RoadmapView from './components/RoadmapView';
+import RevisionQueue from './components/RevisionQueue';
+import StatsCharts from './components/StatsCharts';
+import PracticeHub from './components/PracticeHub';
+import CodeWorkspace from './components/CodeWorkspace/CodeWorkspace';
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigate = (path) => {
+    const targetPath = (path === 'explore' || path === '/explore') ? '/practice/dsa' : (path || '/');
+    window.history.pushState({}, '', targetPath);
+    setCurrentPath(targetPath);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (activeTab === 'explore') {
+      navigate('/practice/dsa');
+    }
+  }, [activeTab]);
   const [tasks, setTasks] = useState([]);
   const [problems, setProblems] = useState([]);
   const [roadmap, setRoadmap] = useState([]);
@@ -30,6 +57,7 @@ export default function App() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isProblemModalOpen, setIsProblemModalOpen] = useState(false);
   const [isTimerOpen, setIsTimerOpen] = useState(false);
+  const [activeCodeProblem, setActiveCodeProblem] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Load initial data & auth state
@@ -46,7 +74,7 @@ export default function App() {
       setProblems(fetchedProblems || []);
       setRoadmap(fetchedRoadmap || []);
       setStats(fetchedStats || {});
-      if (userProfile) setCurrentUser(userProfile);
+      setCurrentUser(userProfile || null);
     } catch (err) {
       console.warn("Failed to load backend data, fallback active", err);
     } finally {
@@ -56,6 +84,10 @@ export default function App() {
 
   useEffect(() => {
     loadData();
+    // The API clears an expired session; drop back to guest mode and reload local data
+    const onExpired = () => { setCurrentUser(null); loadData(); };
+    window.addEventListener('auth:expired', onExpired);
+    return () => window.removeEventListener('auth:expired', onExpired);
   }, []);
 
   const handleAuthSuccess = (user) => {
@@ -113,6 +145,30 @@ export default function App() {
     setStats(newStats);
   };
 
+  const handleOpenCodeEditor = (prob) => {
+    const problemToOpen = prob || {
+      id: "nc-1",
+      number: 1,
+      title: "Two Sum",
+      difficulty: "Easy",
+      topic: "Arrays & Hashing"
+    };
+    setActiveCodeProblem(problemToOpen);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleProblemSolvedFromEditor = async (problemIdOrNumber) => {
+    if (activeCodeProblem) {
+      await handleAddProblem({
+        title: activeCodeProblem.title,
+        difficulty: activeCodeProblem.difficulty || 'Easy',
+        topic: activeCodeProblem.topic || 'Algorithms',
+        solveStatus: 'Independently',
+        date: new Date().toISOString().split('T')[0]
+      });
+    }
+  };
+
   const handleToggleRevision = async (id) => {
     await api.toggleRevision(id);
     setProblems(prev => prev.map(p => p.id === id ? { ...p, needsRevision: !p.needsRevision } : p));
@@ -138,60 +194,81 @@ export default function App() {
   const activeIndex = navTabs.findIndex(t => t.id === activeTab);
   const handleTabChange = (idx, item) => {
     if (item?.id) {
+      if (item.id === 'explore') {
+        navigate('/practice/dsa');
+        return;
+      }
       setActiveTab(item.id);
-      if (item.id === 'dashboard') {
+      if (item.id === 'overview') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        const el = document.getElementById(item.id);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        setTimeout(() => {
+          const el = document.getElementById(item.id);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 50);
       }
     }
   };
 
-  // Scroll spy to keep activeTab in sync with scroll position across sections
-  useEffect(() => {
-    const sectionIds = ['analytics', 'revision', 'roadmap', 'problems', 'planner'];
-    const handleScroll = () => {
-      if (window.scrollY < 350) {
-        setActiveTab('dashboard');
-        return;
-      }
-      for (const id of sectionIds) {
-        const el = document.getElementById(id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= 250 && rect.bottom >= 100) {
-            setActiveTab(id);
-            return;
-          }
-        }
-      }
-    };
+  // Standalone Full-Page Route for /practice/dsa, /practice, or /explore
+  const isPracticeRoute =
+    currentPath === '/practice/dsa' ||
+    currentPath === '/practice' ||
+    currentPath.startsWith('/practice/') ||
+    currentPath === '/explore';
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  if (isPracticeRoute) {
+    return (
+      <div className="min-h-screen w-full bg-slate-50 dark:bg-ink-900 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+        <PracticeHub
+          onNavigate={navigate}
+          setActiveTab={setActiveTab}
+          onOpenTaskModal={() => setIsTaskModalOpen(true)}
+          onOpenProblemModal={() => setIsProblemModalOpen(true)}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          currentUser={currentUser}
+          todayTasks={todayTasks}
+        />
+
+        {/* Modals on standalone practice page */}
+        <AddTaskModal
+          isOpen={isTaskModalOpen}
+          onClose={() => setIsTaskModalOpen(false)}
+          onAddTask={handleAddTask}
+          defaultDate={selectedDate}
+        />
+
+        <AddProblemModal
+          isOpen={isProblemModalOpen}
+          onClose={() => setIsProblemModalOpen(false)}
+          onAddProblem={handleAddProblem}
+        />
+
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          currentUser={currentUser}
+          onAuthSuccess={handleAuthSuccess}
+          onLogout={handleLogout}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="relative min-h-screen bg-black text-slate-100 flex flex-col selection:bg-brand-500 selection:text-black overflow-x-hidden pb-20 md:pb-0">
+    <div className="relative min-h-screen bg-slate-50 dark:bg-ink-900 text-slate-900 dark:text-slate-100 flex flex-col overflow-x-clip pb-20 md:pb-0">
       
-      {/* React Bits Ambient Background Particles */}
-      <Particles
-        particleColors={['#0066FF', '#00C2FF', '#38bdf8', '#818cf8']}
-        particleCount={28}
-        speed={0.12}
-        alpha={0.25}
-      />
-
       {/* Navigation Header */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onNavigate={navigate}
         streak={stats.user?.streak || 7}
         onOpenTaskModal={() => setIsTaskModalOpen(true)}
         onOpenProblemModal={() => setIsProblemModalOpen(true)}
+        onOpenCodeEditor={() => handleOpenCodeEditor()}
         onToggleTimer={() => setIsTimerOpen(!isTimerOpen)}
         isTimerActive={isTimerOpen}
         revisionCount={problems.filter(p => p.needsRevision).length}
@@ -199,22 +276,68 @@ export default function App() {
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
       />
 
-      {/* Main Content Area: Unified Dashboard with all sections */}
+      {/* Main Content Area: Dynamic View based on activeTab */}
       <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Dashboard
-          stats={stats}
-          todayTasks={todayTasks}
-          onToggleTask={handleToggleTask}
-          onOpenTaskModal={() => setIsTaskModalOpen(true)}
-          onOpenProblemModal={() => setIsProblemModalOpen(true)}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
-          currentUser={currentUser}
-          setActiveTab={setActiveTab}
-        />
+        {activeTab === 'planner' && (
+              <DailyPlanner
+                setActiveTab={setActiveTab}
+                onOpenTaskModal={() => setIsTaskModalOpen(true)}
+              />
+            )}
+            {activeTab === 'problems' && (
+              <ProblemTracker
+                setActiveTab={setActiveTab}
+                onOpenProblemModal={() => setIsProblemModalOpen(true)}
+                onOpenCodeEditor={handleOpenCodeEditor}
+              />
+            )}
+            {activeTab === 'roadmap' && (
+              <RoadmapView
+                setActiveTab={setActiveTab}
+              />
+            )}
+            {activeTab === 'revision' && (
+              <RevisionQueue
+                setActiveTab={setActiveTab}
+                onOpenProblemModal={() => setIsProblemModalOpen(true)}
+              />
+            )}
+            {activeTab === 'analytics' && (
+              <StatsCharts
+                setActiveTab={setActiveTab}
+                stats={stats}
+              />
+            )}
+            {activeTab === 'explore' && (
+              <PracticeHub
+                onNavigate={navigate}
+                setActiveTab={setActiveTab}
+                onOpenTaskModal={() => setIsTaskModalOpen(true)}
+                onOpenProblemModal={() => setIsProblemModalOpen(true)}
+                onOpenAuthModal={() => setIsAuthModalOpen(true)}
+                onOpenCodeEditor={handleOpenCodeEditor}
+                currentUser={currentUser}
+                todayTasks={todayTasks}
+              />
+            )}
+            {(activeTab === 'dashboard' || !['planner', 'problems', 'roadmap', 'revision', 'analytics', 'explore'].includes(activeTab)) && (
+              <Dashboard
+                stats={stats}
+                todayTasks={todayTasks}
+                onToggleTask={handleToggleTask}
+                onOpenTaskModal={() => setIsTaskModalOpen(true)}
+                onOpenProblemModal={() => setIsProblemModalOpen(true)}
+                onOpenAuthModal={() => setIsAuthModalOpen(true)}
+                currentUser={currentUser}
+                setActiveTab={setActiveTab}
+                activeTab={activeTab}
+                onNavigate={navigate}
+              />
+            )}
       </main>
 
-      {/* Footer 12 – Always at the bottom of the Dashboard */}
-      <Footer stats={stats} />
+      {/* Footer 12 */}
+      <Footer stats={stats} setActiveTab={setActiveTab} onNavigate={navigate} />
 
       {/* Floating Bottom Nav Bar (Shadcn + Framer Motion Pattern) */}
       <div className="md:hidden">
@@ -247,7 +370,7 @@ export default function App() {
         onAddProblem={handleAddProblem}
       />
 
-      {/* Mobile OTP Authentication Modal */}
+      {/* Sign-in modal: email and password, or Google */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}

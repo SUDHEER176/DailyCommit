@@ -19,12 +19,12 @@ import {
 import { cn } from "@/lib/utils";
 
 export const defaultNavItems = [
-  { id: "dashboard", label: "Dashboard", icon: Sparkles },
-  { id: "planner", label: "Planner", icon: CheckSquare },
-  { id: "problems", label: "Problems", icon: Code2 },
-  { id: "roadmap", label: "Roadmap", icon: Map },
-  { id: "revision", label: "Revision", icon: RotateCcw },
-  { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "overview", label: "Overview", icon: Sparkles },
+  { id: "features", label: "Features", icon: CheckSquare },
+  { id: "today-plan", label: "Today's Plan", icon: CheckSquare },
+  { id: "how-it-works", label: "How It Works", icon: Sparkles },
+  { id: "integrations", label: "Integrations", icon: Code2 },
+  { id: "faqs", label: "FAQs", icon: MessageCircle },
 ];
 
 export const demoNavItems = [
@@ -36,7 +36,7 @@ export const demoNavItems = [
   { id: "profile", label: "Profile", icon: User },
 ];
 
-const MOBILE_LABEL_WIDTH = 80;
+const MOBILE_LABEL_WIDTH = 84;
 
 export function BottomNavBar({
   className,
@@ -65,7 +65,7 @@ export function BottomNavBar({
       role="navigation"
       aria-label="Bottom Navigation"
       className={cn(
-        "bg-black/95 backdrop-blur-2xl border border-white/15 rounded-full flex items-center p-1.5 shadow-[0_4px_30px_rgba(0,0,0,0.9)] space-x-1 min-w-[320px] max-w-[95vw] h-[56px] ring-1 ring-white/5",
+        "bg-white/95 dark:bg-black/95  border border-slate-200 dark:border-white/[0.08] rounded-lg flex items-center p-1.5 space-x-0.5 min-w-[320px] max-w-[95vw] h-[56px] ring-1 ring-slate-200 dark:ring-white/5",
         stickyBottom && "fixed inset-x-0 bottom-6 mx-auto z-50 w-fit",
         className,
       )}
@@ -80,10 +80,10 @@ export function BottomNavBar({
             key={item.label}
             whileTap={{ scale: 0.96 }}
             className={cn(
-              "flex items-center gap-0 px-3 py-2 rounded-full transition-all duration-200 relative h-10 min-w-[44px] min-h-[40px] max-h-[44px]",
+              "flex items-center gap-0 px-2.5 py-2 rounded-md transition-colors duration-150 relative h-10 min-w-[40px] min-h-[40px] max-h-[44px] flex-shrink-0",
               isActive
-                ? "bg-white/10 text-white border border-white/20 shadow-[0_0_16px_rgba(255,255,255,0.06)] gap-2 font-bold"
-                : "bg-transparent text-slate-400 hover:text-slate-100 hover:bg-white/5",
+                ? "bg-brand-500/10 dark:bg-brand-500/25 text-slate-900 dark:text-white border border-brand-500/30 dark:border-brand-500/40 gap-2 font-medium"
+                : "bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-white/5",
               "focus:outline-none focus-visible:ring-0",
             )}
             onClick={() => handleSelect(idx, item)}
@@ -92,16 +92,16 @@ export function BottomNavBar({
           >
             <div className="relative flex items-center justify-center">
               <Icon
-                size={20}
+                size={19}
                 strokeWidth={2.2}
                 aria-hidden
                 className={cn(
-                  "transition-colors duration-200",
-                  isActive ? "text-[#0066FF]" : "text-slate-400"
+                  "transition-colors duration-150",
+                  isActive ? "text-brand-600 dark:text-brand-400" : "text-slate-500 dark:text-slate-400"
                 )}
               />
               {showBadge && (
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center animate-pulse">
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[11px] font-medium flex items-center justify-center">
                   {revisionCount}
                 </span>
               )}
@@ -123,7 +123,7 @@ export function BottomNavBar({
             >
               <span
                 className={cn(
-                  "font-bold text-xs whitespace-nowrap select-none transition-opacity duration-200 overflow-hidden text-ellipsis leading-tight text-white",
+                  "font-medium text-xs whitespace-nowrap select-none transition-opacity duration-150 overflow-hidden text-ellipsis leading-tight text-slate-900 dark:text-white",
                   isActive ? "opacity-100" : "opacity-0",
                 )}
                 title={item.label}

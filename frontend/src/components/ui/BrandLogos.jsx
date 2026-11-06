@@ -122,6 +122,40 @@ export const CoinbaseLogo = ({ size = 19, className = "" }) => (
   </svg>
 );
 
+export const CppLogo = ({ size = 20, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 128 128" fill="none" className={className}>
+    {/* Official C++ Blue Hexagon */}
+    <path fill="#00599C" d="M117.5 35.5l-49.8-29a7.6 7.6 0 0 0-7.4 0l-49.8 29A7.5 7.5 0 0 0 6.8 42v58a7.5 7.5 0 0 0 3.7 6.5l49.8 29a7.6 7.6 0 0 0 7.4 0l49.8-29a7.5 7.5 0 0 0 3.7-6.5V42a7.5 7.5 0 0 0-3.7-6.5z"/>
+    {/* Dark lower facet */}
+    <path fill="#004482" d="M64 125.5a7.6 7.6 0 0 0 3.7-1l49.8-29a7.5 7.5 0 0 0 3.7-6.5V42a7.5 7.5 0 0 0-1.2-4.1L64 64v61.5z"/>
+    {/* Light upper facet */}
+    <path fill="#659AD2" d="M64 6.5a7.6 7.6 0 0 0-3.7 1l-49.8 29A7.5 7.5 0 0 0 6.8 42v47.9L64 64V6.5z"/>
+    {/* Center 'C' */}
+    <path fill="#FFFFFF" d="M64 36.4c-15.2 0-27.6 12.4-27.6 27.6S48.8 91.6 64 91.6c9.8 0 18.4-5.1 23.3-12.8l-11.7-6.8c-2.7 4.3-7.5 7.2-11.6 7.2-8.4 0-15.2-6.8-15.2-15.2s6.8-15.2 15.2-15.2c4.1 0 8.9 2.9 11.6 7.2l11.7-6.8C82.4 41.5 73.8 36.4 64 36.4z"/>
+    {/* First '+' */}
+    <path fill="#FFFFFF" d="M89.3 57.3h-4.6v-4.6c0-1.1-.9-2-2-2s-2 .9-2 2v4.6H76c-1.1 0-2 .9-2 2s.9 2 2 2h4.7v4.6c0 1.1.9 2 2 2s2-.9 2-2v-4.6h4.6c1.1 0 2-.9 2-2s-.9-2-2-2z"/>
+    {/* Second '+' */}
+    <path fill="#FFFFFF" d="M106.7 57.3h-4.6v-4.6c0-1.1-.9-2-2-2s-2 .9-2 2v4.6h-4.7c-1.1 0-2 .9-2 2s.9 2 2 2h4.7v4.6c0 1.1.9 2 2 2s2-.9 2-2v-4.6h4.6c1.1 0 2-.9 2-2s-.9-2-2-2z"/>
+  </svg>
+);
+
+export const PythonLogo = ({ size = 20, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 110 110" fill="none" className={className}>
+    {/* Official Python Top Blue Snake */}
+    <path
+      fill="#3776AB"
+      d="M55.05 0C47.98 0 41.21 2.37 36.14 6.78C29.58 12.49 28.51 20.31 28.51 31.06v8.78h27.93v3.99H17.56C8.24 43.83 0 51.68 0 63.48c0 10.97 8.73 18.87 17.56 18.87h7.47V70.83c0-11.38 9.59-20.64 21.09-20.64h27.93c9.32 0 16.88-7.7 16.88-16.88V17.72C90.93 8.39 83.37 0 74.05 0H55.05z"
+    />
+    <circle cx="41.5" cy="13.5" r="4.5" fill="#FFFFFF" />
+    {/* Official Python Bottom Yellow Snake */}
+    <path
+      fill="#FFD43B"
+      d="M55.05 110c7.07 0 13.84-2.37 18.91-6.78 6.56-5.71 7.63-13.53 7.63-24.28v-8.78H53.66v-3.99h38.88c9.32 0 17.56-7.85 17.56-19.65 0-10.97-8.73-18.87-17.56-18.87h-7.47v11.52c0 11.38-9.59 20.64-21.09 20.64H36.05c-9.32 0-16.88 7.7-16.88 16.88v15.59C19.17 101.61 26.73 110 36.05 110h19z"
+    />
+    <circle cx="68.5" cy="96.5" r="4.5" fill="#FFFFFF" />
+  </svg>
+);
+
 import ZeroHesitationLogo, { ZeroHesitationEmblem } from './ZeroHesitationLogo';
 
 export { ZeroHesitationLogo, ZeroHesitationEmblem };
@@ -146,4 +180,8 @@ export const BRAND_COMPONENT_MAP = {
   Databricks: DatabricksLogo,
   ByteDance: ByteDanceLogo,
   Coinbase: CoinbaseLogo,
+  Cpp: CppLogo,
+  CPlusPlus: CppLogo,
+  Python: PythonLogo,
 };
+

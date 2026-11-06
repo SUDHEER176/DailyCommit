@@ -1,244 +1,117 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Compass, 
-  Code2, 
-  RotateCcw, 
-  Flame, 
-  CheckCircle2, 
-  ArrowRight, 
-  Sparkles, 
-  Terminal, 
-  Zap,
-  Layers,
-  Award
-} from 'lucide-react';
+import React from 'react';
+import { CheckCircle2, ArrowUpRight } from 'lucide-react';
 
 /**
- * React Bits Pro: How It Works 7 Block
- * Four steps wrapped around an arched live interactive showcase portal (replacing static image).
- * Pure black background with clean non-bold typography.
+ * How it works: four steps around the day's sprint card.
  */
 export default function HowItWorks7({
-  title = "Four Structured Steps to Interview Mastery",
-  subtitle = "A proven, high-retention learning system designed to take you from core patterns to offer-ready confidence.",
+  title = 'How a week of prep runs',
+  subtitle = 'Pick a track, solve the day’s problems, revise what slipped and keep the streak going.',
   setActiveTab,
   onOpenProblemModal,
-  className = ""
+  className = '',
 }) {
-  const [activeStep, setActiveStep] = useState(0);
-
   const steps = [
     {
-      number: "01",
-      icon: Compass,
-      title: "Select Your Syllabus Track",
-      description: "Choose between the 4-Week Fast Track or 6-Week Master Roadmap covering 16 core patterns from Two Pointers to Dynamic Programming.",
-      tag: "Syllabus Plan",
-      color: "text-amber-400",
-      borderColor: "border-amber-400/20",
-      action: () => setActiveTab && setActiveTab('roadmap')
+      number: '01',
+      title: 'Pick a track',
+      description: 'Choose the 4 week fast track or the 6 week roadmap, covering 16 core patterns from two pointers to dynamic programming.',
+      action: () => setActiveTab && setActiveTab('roadmap'),
     },
     {
-      number: "02",
-      icon: Code2,
-      title: "Execute Daily Focused Drills",
-      description: "Solve 2-3 hand-picked problems per day with real interview time constraints, complexity notes, and test cases.",
-      tag: "Daily Practice",
-      color: "text-[#0066FF]",
-      borderColor: "border-[#0066FF]/20",
-      action: onOpenProblemModal
+      number: '02',
+      title: 'Solve the day’s problems',
+      description: 'Two or three hand-picked problems a day, with a time limit, complexity notes and test cases.',
+      action: onOpenProblemModal,
     },
     {
-      number: "03",
-      icon: RotateCcw,
-      title: "Smart Spaced Repetition",
-      description: "Never forget algorithms. Problems where you needed hints automatically return at 3, 7, and 21-day intervals.",
-      tag: "Retention Engine",
-      color: "text-cyan-400",
-      borderColor: "border-cyan-400/20",
-      action: () => setActiveTab && setActiveTab('revision')
+      number: '03',
+      title: 'Revise what slipped',
+      description: 'Problems you needed a hint for come back on their own at 3, 7 and 21 days.',
+      action: () => setActiveTab && setActiveTab('revision'),
     },
     {
-      number: "04",
-      icon: Flame,
-      title: "Build Unbreakable Streaks",
-      description: "Visualize daily consistency on contribution heatmaps, track velocity, and monitor topic readiness metrics.",
-      tag: "Consistency Loop",
-      color: "text-emerald-400",
-      borderColor: "border-emerald-400/20",
-      action: () => setActiveTab && setActiveTab('analytics')
+      number: '04',
+      title: 'Keep the streak',
+      description: 'The heatmap marks every day you showed up, next to your weekly pace and topic readiness.',
+      action: () => setActiveTab && setActiveTab('analytics'),
     },
   ];
 
+  const Step = ({ step }) => (
+    <button
+      type="button"
+      onClick={step.action}
+      className="group w-full text-left rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-ink-850 p-6 hover:border-slate-300 dark:hover:border-white/[0.14] transition-colors"
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-xs text-slate-500">{step.number}</span>
+        <ArrowUpRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} aria-hidden />
+      </div>
+      <h3 className="mt-4 text-[15px] font-medium text-slate-900 dark:text-white">{step.title}</h3>
+      <p className="mt-2 text-sm leading-[1.55] text-slate-500 dark:text-slate-400">{step.description}</p>
+    </button>
+  );
+
   return (
-    <section className={`w-full py-12 px-4 sm:px-6 lg:px-8 bg-black text-white relative rounded-3xl border border-white/[0.06] ${className}`}>
-      
-      {/* Background Grid Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none opacity-25 rounded-3xl" />
-
-      {/* Section Header */}
-      <div className="relative z-10 max-w-3xl mx-auto text-center space-y-3 mb-12">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0066FF]/10 border border-[#0066FF]/25 text-xs font-normal text-[#38bdf8]">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>The Zero Hesitation Workflow</span>
-        </div>
-
-        <h2 className="text-3xl sm:text-4xl font-medium tracking-tight text-white leading-tight">
+    <section className={`w-full ${className}`}>
+      <div className="max-w-2xl">
+        <span className="eyebrow">How it works</span>
+        <h2 className="mt-3 text-[32px] sm:text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-slate-900 dark:text-white">
           {title}
         </h2>
-
-        <p className="text-slate-400 text-sm sm:text-base font-normal leading-relaxed">
-          {subtitle}
-        </p>
+        <p className="mt-4 text-base leading-[1.6] text-slate-600 dark:text-slate-400">{subtitle}</p>
       </div>
 
-      {/* Main 3-Column Layout: Left Steps, Central Arched Portal, Right Steps */}
-      <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-        
-        {/* Left 2 Steps (Step 1 & Step 2) */}
-        <div className="lg:col-span-4 space-y-6">
-          {steps.slice(0, 2).map((step, idx) => {
-            const Icon = step.icon;
-            const isHovered = activeStep === idx;
-            return (
-              <div
-                key={step.number}
-                onMouseEnter={() => setActiveStep(idx)}
-                onClick={step.action}
-                className={`p-6 rounded-2xl border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group ${
-                  isHovered 
-                    ? "bg-white/[0.04] border-white/20 shadow-xl" 
-                    : "bg-white/[0.015] border-white/[0.06] hover:border-white/10"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono font-normal text-slate-500">
-                      STEP {step.number}
-                    </span>
-                    <span className={`text-[10px] uppercase font-normal px-2 py-0.5 rounded-full bg-white/[0.03] border border-white/10 ${step.color}`}>
-                      {step.tag}
-                    </span>
-                  </div>
-                  <Icon className={`w-5 h-5 ${step.color} transition-transform group-hover:scale-110`} />
-                </div>
-
-                <h3 className="text-base font-medium text-white mb-1.5 group-hover:text-slate-100">
-                  {step.title}
-                </h3>
-
-                <p className="text-xs sm:text-sm text-slate-400 font-normal leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            );
-          })}
+      <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+        <div className="grid gap-4 content-start order-2 lg:order-1">
+          {steps.slice(0, 2).map((s) => <Step key={s.number} step={s} />)}
         </div>
 
-        {/* Central Arched Live Interactive Portal (Replaced Static Image) */}
-        <div className="lg:col-span-4 flex justify-center">
-          <div className="w-full max-w-[340px] sm:max-w-[380px] h-[480px] sm:h-[520px] rounded-t-[140px] sm:rounded-t-[180px] rounded-b-3xl border border-white/15 bg-[#070b14] overflow-hidden relative shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] flex flex-col items-center justify-between p-6">
-            
-            {/* Ambient Arched Crown Glow */}
-            <div className="absolute top-0 inset-x-0 h-36 bg-[radial-gradient(ellipse_at_top,#0066FF25,transparent_70%)] pointer-events-none" />
+        {/* The day's sprint, as it appears in the app */}
+        <div className="order-1 lg:order-2 rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-ink-950 p-4 flex flex-col">
+          <div className="flex items-center justify-between px-2 h-8">
+            <span className="text-[13px] text-slate-900 dark:text-white">Today’s sprint</span>
+            <span className="font-mono text-xs text-slate-500">2 of 3</span>
+          </div>
 
-            {/* Top Arched Flame Emblem Header */}
-            <div className="pt-6 flex flex-col items-center space-y-2 relative z-10">
-              <div className="w-14 h-14 rounded-full bg-white/[0.04] border border-[#0066FF]/30 flex items-center justify-center shadow-[0_0_20px_rgba(0,102,255,0.25)]">
-                <Flame className="w-7 h-7 text-[#0066FF]" />
-              </div>
-              <p className="text-xs uppercase tracking-widest text-slate-400 font-normal">
-                Daily Problem Sprint
-              </p>
+          <div className="mt-2 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-ink-850 p-4 flex-1">
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="text-sm text-slate-900 dark:text-white">167. Two Sum II</span>
+              <span className="text-xs text-amber-600 dark:text-amber-400">Medium</span>
             </div>
 
-            {/* Central Interactive DSA Simulator Card */}
-            <div className="w-full bg-[#0b101c]/90 border border-white/10 rounded-2xl p-4 space-y-3.5 relative z-10 backdrop-blur-md shadow-2xl">
-              <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-                <div className="flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-normal text-white font-mono">Two Sum II</span>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-400 font-mono">
-                  Medium
-                </span>
-              </div>
+            <pre className="mt-4 rounded-lg bg-slate-50 dark:bg-ink-900 border border-slate-200 dark:border-white/[0.06] p-3 font-mono text-xs leading-[1.7] text-slate-800 dark:text-slate-200 overflow-hidden">
+<span className="text-slate-500">{'// two pointers, O(n)'}</span>{'\n'}
+<span className="text-brand-600 dark:text-brand-400">while</span> (l {'<'} r) {'{'}{'\n'}
+{'  '}<span className="text-brand-600 dark:text-brand-400">const</span> sum = nums[l] + nums[r];{'\n'}
+{'  '}<span className="text-brand-600 dark:text-brand-400">if</span> (sum === target) <span className="text-brand-600 dark:text-brand-400">return</span> [l + <span className="text-amber-600 dark:text-amber-300">1</span>, r + <span className="text-amber-600 dark:text-amber-300">1</span>];{'\n'}
+{'  '}sum {'<'} target ? l++ : r--;{'\n'}
+{'}'}
+            </pre>
 
-              {/* Code Snippet Preview */}
-              <div className="bg-black/60 rounded-xl p-3 font-mono text-[11px] text-slate-300 space-y-1 border border-white/5">
-                <p className="text-slate-500">// Two Pointers O(N) Approach</p>
-                <p><span className="text-cyan-400">while</span> (left &lt; right) &#123;</p>
-                <p className="pl-3"><span className="text-amber-400">const</span> sum = nums[left] + nums[right];</p>
-                <p className="pl-3"><span className="text-cyan-400">if</span> (sum === target) <span className="text-emerald-400">return</span> [left + 1, right + 1];</p>
-                <p>&#125;</p>
-              </div>
-
-              {/* Live Run Benchmark */}
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                <div className="flex items-center gap-1.5 text-emerald-400">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span className="font-mono">Accepted (0ms)</span>
-                </div>
-                <span className="font-mono text-slate-400">100% Faster</span>
-              </div>
+            <div className="mt-4 flex items-center justify-between text-xs">
+              <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Accepted
+              </span>
+              <span className="font-mono tabular-nums text-slate-500">21 / 21 tests · 4 ms</span>
             </div>
+          </div>
 
-            {/* Bottom Consistency Ring Badge */}
-            <div className="w-full pb-2 flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-slate-300 relative z-10">
-              <div className="flex items-center gap-2">
-                <Zap className="w-3.5 h-3.5 text-[#0066FF]" />
-                <span className="font-normal">Streak Intact</span>
-              </div>
-              <span className="font-mono text-emerald-400 font-normal">7 Days Active</span>
-            </div>
-
+          <div className="mt-2 flex items-center justify-between px-2 h-10">
+            <span className="flex items-center gap-2 text-[13px] text-slate-600 dark:text-slate-300">
+              <span className="cell" data-level="4" aria-hidden />
+              Streak
+            </span>
+            <span className="font-mono text-[13px] tabular-nums text-slate-900 dark:text-white">7 days</span>
           </div>
         </div>
 
-        {/* Right 2 Steps (Step 3 & Step 4) */}
-        <div className="lg:col-span-4 space-y-6">
-          {steps.slice(2, 4).map((step, idx) => {
-            const stepIndex = idx + 2;
-            const Icon = step.icon;
-            const isHovered = activeStep === stepIndex;
-            return (
-              <div
-                key={step.number}
-                onMouseEnter={() => setActiveStep(stepIndex)}
-                onClick={step.action}
-                className={`p-6 rounded-2xl border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group ${
-                  isHovered 
-                    ? "bg-white/[0.04] border-white/20 shadow-xl" 
-                    : "bg-white/[0.015] border-white/[0.06] hover:border-white/10"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono font-normal text-slate-500">
-                      STEP {step.number}
-                    </span>
-                    <span className={`text-[10px] uppercase font-normal px-2 py-0.5 rounded-full bg-white/[0.03] border border-white/10 ${step.color}`}>
-                      {step.tag}
-                    </span>
-                  </div>
-                  <Icon className={`w-5 h-5 ${step.color} transition-transform group-hover:scale-110`} />
-                </div>
-
-                <h3 className="text-base font-medium text-white mb-1.5 group-hover:text-slate-100">
-                  {step.title}
-                </h3>
-
-                <p className="text-xs sm:text-sm text-slate-400 font-normal leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            );
-          })}
+        <div className="grid gap-4 content-start order-3">
+          {steps.slice(2, 4).map((s) => <Step key={s.number} step={s} />)}
         </div>
-
       </div>
-
     </section>
   );
 }

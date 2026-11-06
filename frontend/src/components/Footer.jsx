@@ -1,65 +1,40 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Flame, Zap, CheckCircle2, Code2, Github,
-  Twitter, ExternalLink, ArrowRight, Circle, Rss, Shield
-} from 'lucide-react';
+import { CheckCircle2, Github, Twitter, ArrowUpRight } from 'lucide-react';
 import CodeStreakLogo from './ui/CodeStreakLogo';
-
-/* ─────────────────────────────────────────────
-   Footer 12 – Dark Newsletter Panel + Status Vitals
-   Adapted from React Bits Pro Footer 12 pattern
-   ───────────────────────────────────────────── */
-
-const STATUS_VITALS = [
-  { label: 'API Server',       status: 'operational', uptime: '99.9%' },
-  { label: 'DSA Engine',       status: 'operational', uptime: '100%'  },
-  { label: 'Revision Queue',   status: 'operational', uptime: '99.7%' },
-  { label: 'Streak Tracker',   status: 'operational', uptime: '99.9%' },
-];
+import { BRAND } from '@/lib/brand';
 
 const NAV_LINKS = {
   Product: [
-    { label: 'Dashboard',       href: '#dashboard' },
-    { label: 'Daily Planner',   href: '#planner'   },
-    { label: 'Problem Tracker', href: '#problems'  },
-    { label: 'Roadmap',         href: '#roadmap'   },
-    { label: 'Analytics',       href: '#analytics' },
+    { label: 'Overview', href: '#overview' },
+    { label: 'Practice hub', href: '#explore' },
+    { label: 'Features', href: '#features' },
+    { label: "Today's plan", href: '#today-plan' },
+    { label: 'How it works', href: '#how-it-works' },
+    { label: 'Integrations', href: '#integrations' },
+    { label: 'FAQ', href: '#faqs' },
   ],
   Resources: [
-    { label: 'LeetCode',      href: 'https://leetcode.com',        external: true },
-    { label: 'NeetCode',      href: 'https://neetcode.io',         external: true },
-    { label: 'Striver SDE',   href: 'https://takeuforward.org',    external: true },
-    { label: 'CP-Algorithms', href: 'https://cp-algorithms.com',   external: true },
+    { label: 'LeetCode', href: 'https://leetcode.com', external: true },
+    { label: 'NeetCode', href: 'https://neetcode.io', external: true },
+    { label: 'Striver SDE', href: 'https://takeuforward.org', external: true },
+    { label: 'CP-Algorithms', href: 'https://cp-algorithms.com', external: true },
   ],
   Company: [
-    { label: 'About',   href: '#about'   },
+    { label: 'About', href: '#about' },
     { label: 'Privacy', href: '#privacy' },
-    { label: 'Terms',   href: '#terms'   },
+    { label: 'Terms', href: '#terms' },
   ],
 };
 
-function StatusDot({ status }) {
-  const color = status === 'operational' ? '#22c55e' : '#f59e0b';
-  return (
-    <span className="relative flex h-2 w-2 flex-shrink-0">
-      <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
-        style={{ background: color }} />
-      <span className="relative inline-flex h-2 w-2 rounded-full"
-        style={{ background: color }} />
-    </span>
-  );
-}
-
-export default function Footer({ stats = {} }) {
-  const [email,     setEmail]     = useState('');
+export default function Footer({ setActiveTab, onNavigate }) {
+  const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [error,     setError]     = useState('');
+  const [error, setError] = useState('');
 
   const handleSubscribe = (e) => {
     e.preventDefault();
     if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setError('Please enter a valid email address.');
+      setError('Enter a valid email address');
       return;
     }
     setError('');
@@ -67,189 +42,89 @@ export default function Footer({ stats = {} }) {
     setEmail('');
   };
 
-  const totalSolved = stats.totalProblemsSolved || 42;
-  const streak      = stats.user?.streak        || 7;
-  const revisionDue = stats.revisionCount       || 3;
+  const handleLink = (e, link) => {
+    if (link.external || !link.href.startsWith('#')) return;
+    e.preventDefault();
+    const tabId = link.href.slice(1);
+    if (tabId === 'explore') {
+      if (onNavigate) onNavigate('/practice/dsa');
+      else {
+        window.history.pushState({}, '', '/practice/dsa');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+      return;
+    }
+    if (setActiveTab) setActiveTab(tabId);
+    const el = document.getElementById(tabId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
-    <footer className="relative z-10 w-full border-t border-white/[0.07] bg-black/95 backdrop-blur-xl overflow-hidden">
-
-      {/* Ambient top glow */}
-      <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[200px]
-        bg-gradient-to-b from-[#0066FF]/10 to-transparent blur-[80px] rounded-full" />
-
+    <footer className="relative z-10 w-full mt-32 border-t border-slate-200 dark:border-white/[0.08]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="py-16 grid grid-cols-2 md:grid-cols-12 gap-12">
+          {/* Brand and newsletter */}
+          <div className="col-span-2 md:col-span-6">
+            <CodeStreakLogo size={20} textSize="text-[17px]" />
+            <p className="mt-4 max-w-xs text-sm leading-[1.6] text-slate-500 dark:text-slate-400">
+              A daily DSA plan, problem log and revision queue for coding interview prep.
+            </p>
 
-        {/* ── TOP BAND: Newsletter + Status Vitals ── */}
-        <div className="py-12 grid grid-cols-1 lg:grid-cols-2 gap-10 border-b border-white/[0.06]">
-
-          {/* Newsletter */}
-          <div className="space-y-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full
-              bg-[#0066FF]/10 border border-[#0066FF]/25 text-[#38bdf8] text-xs font-semibold">
-              <Rss className="w-3 h-3" />
-              <span>DSA Tips &amp; Streak Insights</span>
-            </div>
-
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                Level up your prep,<br />
-                <span className="bg-gradient-to-r from-[#0066FF] to-[#38bdf8] bg-clip-text text-transparent">
-                  one streak at a time.
-                </span>
-              </h2>
-              <p className="mt-3 text-sm text-slate-400 max-w-md leading-relaxed">
-                Get weekly curated DSA patterns, interview tips, and streak challenge drops —
-                zero spam, unsubscribe anytime.
-              </p>
-            </div>
-
-            <AnimatePresence mode="wait">
+            <div className="mt-8 max-w-sm">
+              <label htmlFor="footer-newsletter-email" className="block text-sm text-slate-900 dark:text-white">
+                One pattern and one interview tip, every Monday
+              </label>
               {!submitted ? (
-                <motion.form
-                  key="form"
-                  onSubmit={handleSubscribe}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="flex flex-col sm:flex-row gap-3 max-w-md"
-                >
-                  <div className="flex-1 relative">
-                    <input
-                      id="footer-newsletter-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); setError(''); }}
-                      placeholder="your@email.com"
-                      className="w-full h-11 px-4 rounded-xl bg-white/5 border border-white/10
-                        text-sm text-white placeholder:text-slate-500
-                        focus:outline-none focus:border-[#0066FF]/60 focus:ring-1 focus:ring-[#0066FF]/40
-                        transition-colors"
-                    />
-                    {error && (
-                      <p className="absolute -bottom-5 left-0 text-xs text-red-400">{error}</p>
-                    )}
-                  </div>
+                <form onSubmit={handleSubscribe} className="mt-3 flex gap-2" noValidate>
+                  <input
+                    id="footer-newsletter-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                    placeholder="Email"
+                    aria-invalid={!!error}
+                    aria-describedby={error ? 'footer-newsletter-error' : undefined}
+                    className="flex-1 min-w-0 h-10 px-3 rounded-lg bg-white dark:bg-ink-800 border border-slate-200 dark:border-white/[0.08] text-sm text-slate-900 dark:text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  />
                   <button
                     id="footer-newsletter-submit"
                     type="submit"
-                    className="h-11 px-5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#0052FF]
-                      hover:from-[#0055dd] hover:to-[#0040cc] text-white font-bold text-sm
-                      flex items-center gap-2 shadow-[0_0_20px_-4px_rgba(0,102,255,0.5)]
-                      transition-colors active:scale-95 whitespace-nowrap"
+                    className="h-10 px-4 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-ink-900 text-sm font-medium hover:bg-slate-700 dark:hover:bg-white transition-colors active:scale-[0.98]"
                   >
-                    Subscribe <ArrowRight className="w-4 h-4" />
+                    Subscribe
                   </button>
-                </motion.form>
+                </form>
               ) : (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-500/10
-                    border border-green-500/25 text-green-400 text-sm font-semibold max-w-md"
-                >
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-                  <span>You're in! First streak tip lands soon 🚀</span>
-                </motion.div>
+                <p className="mt-3 flex items-center gap-2 h-10 text-sm text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
+                  Subscribed. The first one arrives Monday
+                </p>
               )}
-            </AnimatePresence>
-
-            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1">
-              <Shield className="w-3.5 h-3.5" /> No spam. Unsubscribe anytime.
-            </p>
-          </div>
-
-          {/* Status Vitals Panel */}
-          <div className="flex flex-col justify-center">
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 space-y-4">
-
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                  System Status
-                </span>
-                <span className="flex items-center gap-1.5 text-xs text-green-400 font-semibold">
-                  <Circle className="w-2 h-2 fill-green-400" /> All Systems Operational
-                </span>
-              </div>
-
-              {/* Service rows */}
-              <div className="space-y-2.5">
-                {STATUS_VITALS.map((v) => (
-                  <div key={v.label}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg
-                      bg-white/[0.03] border border-white/[0.05]">
-                    <div className="flex items-center gap-2.5">
-                      <StatusDot status={v.status} />
-                      <span className="text-sm text-slate-300 font-medium">{v.label}</span>
-                    </div>
-                    <span className="text-xs text-slate-500 font-mono">{v.uptime} uptime</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Live stats bar */}
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                {[
-                  { icon: Flame, label: 'Day Streak', value: streak    },
-                  { icon: Code2, label: 'Solved',     value: totalSolved },
-                  { icon: Zap,   label: 'Revisions',  value: revisionDue },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label}
-                    className="flex flex-col items-center p-2.5 rounded-lg
-                      bg-[#0066FF]/10 border border-[#0066FF]/20">
-                    <Icon className="w-4 h-4 text-[#0066FF] mb-1" />
-                    <span className="text-base font-black text-white">{value}</span>
-                    <span className="text-[10px] text-slate-400 font-medium leading-tight text-center">{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── MIDDLE BAND: Brand + Nav Links ── */}
-        <div className="py-10 grid grid-cols-2 sm:grid-cols-4 gap-8 border-b border-white/[0.06]">
-
-          {/* Brand column */}
-          <div className="col-span-2 sm:col-span-1 space-y-4">
-            <CodeStreakLogo size={28} textSize="text-base" showText animated={false} />
-            <p className="text-xs text-slate-400 leading-relaxed max-w-[200px]">
-              Your personalized DSA roadmap to ace technical coding interviews — built for consistency.
-            </p>
-            <div className="flex items-center gap-3">
-              {[
-                { Icon: Github,  href: 'https://github.com',  label: 'GitHub'  },
-                { Icon: Twitter, href: 'https://twitter.com', label: 'Twitter' },
-              ].map(({ Icon, href, label }) => (
-                <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-                  aria-label={label}
-                  className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center
-                    text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
-                  <Icon className="w-4 h-4" />
-                </a>
-              ))}
+              {error ? (
+                <p id="footer-newsletter-error" className="mt-2 text-xs text-rose-600 dark:text-rose-400">{error}</p>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500">No spam. Unsubscribe any time</p>
+              )}
             </div>
           </div>
 
-          {/* Nav links */}
           {Object.entries(NAV_LINKS).map(([group, links]) => (
-            <div key={group} className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">{group}</h3>
-              <ul className="space-y-2">
+            <div key={group} className="md:col-span-2">
+              <h3 className="text-[13px] text-slate-500">{group}</h3>
+              <ul className="mt-4 space-y-2">
                 {links.map((link) => (
                   <li key={link.label}>
                     <a
                       href={link.href}
                       target={link.external ? '_blank' : undefined}
                       rel={link.external ? 'noopener noreferrer' : undefined}
-                      className="flex items-center gap-1 text-sm text-slate-400 hover:text-white
-                        transition-colors group"
+                      onClick={(e) => handleLink(e, link)}
+                      className="group inline-flex items-center gap-1 h-7 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors rounded-sm"
                     >
                       {link.label}
                       {link.external && (
-                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" strokeWidth={1.5} aria-hidden />
                       )}
                     </a>
                   </li>
@@ -259,22 +134,26 @@ export default function Footer({ stats = {} }) {
           ))}
         </div>
 
-        {/* ── BOTTOM BAND: Copyright ── */}
-        <div className="py-5 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-xs text-slate-500">
-            © 2026 Zero Hesitation. Built with ❤️ for DSA grinders.
-          </p>
-          <p className="text-xs text-slate-500 flex items-center gap-1">
-            <span className="text-[#0066FF] font-semibold">React</span>
-            <span className="text-slate-600 mx-0.5">·</span>
-            <span className="text-[#0066FF] font-semibold">Tailwind</span>
-            <span className="text-slate-600 mx-0.5">·</span>
-            <span className="text-[#0066FF] font-semibold">Framer Motion</span>
-            <span className="text-slate-600 mx-0.5">·</span>
-            <span className="text-[#0066FF] font-semibold">Node.js</span>
-          </p>
+        <div className="py-6 border-t border-slate-200 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-slate-500">© 2026 {BRAND.name}</p>
+          <div className="flex items-center gap-1">
+            {[
+              { Icon: Github, href: 'https://github.com', label: 'GitHub' },
+              { Icon: Twitter, href: 'https://twitter.com', label: 'Twitter' },
+            ].map(({ Icon, href, label }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
+              >
+                <Icon className="w-4 h-4" strokeWidth={1.5} />
+              </a>
+            ))}
+          </div>
         </div>
-
       </div>
     </footer>
   );

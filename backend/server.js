@@ -1,3 +1,4 @@
+import 'dotenv/config'; // must stay first: loads DATABASE_URL before the store connects
 import express from 'express';
 import cors from 'cors';
 import tasksRouter from './routes/tasks.js';
@@ -5,37 +6,76 @@ import problemsRouter from './routes/problems.js';
 import roadmapRouter from './routes/roadmap.js';
 import statsRouter from './routes/stats.js';
 import authRouter from './routes/auth.js';
+import plannerRouter from './routes/planner.js';
+import { initDb, flushDb, storageMode } from './data/store.js';
+import { pool, ping } from './data/neon.js';
+import { requireUser, googleClientId } from './data/auth.js';
+import { mailConfigured, verifyMailer } from './data/mailer.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
-// API Routes
+// Sign-in routes are public; every data route needs a signed-in user (in Neon mode)
 app.use('/api/auth', authRouter);
-app.use('/api/tasks', tasksRouter);
-app.use('/api/problems', problemsRouter);
-app.use('/api/roadmap', roadmapRouter);
-app.use('/api/stats', statsRouter);
+app.use('/api/tasks', requireUser, tasksRouter);
+// LeetCode statement lookups stay public so guests can use the editor
+app.use('/api/problems', (req, res, next) => (req.method === 'GET' && req.path.startsWith('/details/') ? next() : requireUser(req, res, next)), problemsRouter);
+app.use('/api/roadmap', requireUser, roadmapRouter);
+app.use('/api/stats', requireUser, statsRouter);
+app.use('/api/planner', requireUser, plannerRouter);
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    message: 'CodeStreak DSA Planner Backend API is online! 🚀',
-    timestamp: new Date().toISOString()
+// Health check, including the database connection
+app.get('/api/health', async (req, res) => {
+  const body = { status: 'healthy', storage: storageMode, timestamp: new Date().toISOString() };
+  if (pool) {
+    try {
+      const { now } = await ping();
+      body.database = { connected: true, serverTime: now };
+    } catch (err) {
+      return res.status(503).json({ ...body, status: 'degraded', database: { connected: false, error: err.message } });
+    }
+  }
+  res.json(body);
+});
+
+async function start() {
+  try {
+    const info = await initDb();
+    if (info.mode === 'neon') {
+      console.log(`[neon] connected. Accounts on: email and password${googleClientId ? ', Google' : ' (Google off, set GOOGLE_CLIENT_ID to enable)'}`);
+      if (mailConfigured) {
+        verifyMailer()
+          .then(() => console.log('[mail] SMTP ready, verification codes will be emailed'))
+          .catch((err) => console.error('[mail] SMTP login failed:', err.message));
+      } else {
+        console.log('[mail] SMTP not set, verification codes are printed here instead of emailed');
+      }
+    } else {
+      console.log('[storage] DATABASE_URL not set, using data/db.json. Accounts are off');
+    }
+  } catch (err) {
+    console.error('[neon] could not connect:', err.message);
+    console.error('Check DATABASE_URL in backend/.env, then start the server again.');
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Backend API running on http://localhost:${PORT} (health: /api/health)`);
   });
-});
+}
 
-app.listen(PORT, () => {
-  console.log(`\n======================================================`);
-  console.log(`  🚀 CodeStreak Backend API Server is running!`);
-  console.log(`  📡 URL: http://localhost:${PORT}`);
-  console.log(`  👉 Health: http://localhost:${PORT}/api/health`);
-  console.log(`======================================================\n`);
-});
+async function shutdown() {
+  await flushDb().catch(() => {});
+  if (pool) await pool.end().catch(() => {});
+  process.exit(0);
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+start();

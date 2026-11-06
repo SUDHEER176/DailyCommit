@@ -1,39 +1,18 @@
 import React from 'react';
-import { 
-  Flame, 
-  CheckCircle2, 
-  Target, 
-  Code, 
-  ArrowRight, 
-  Clock, 
-  TrendingUp, 
-  Sparkles, 
-  AlertCircle,
-  Plus
-} from 'lucide-react';
+import { ArrowRight, Plus } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import SpotlightCard from './reactbits/SpotlightCard';
-import CountUp from './reactbits/CountUp';
-import ShinyText from './reactbits/ShinyText';
-import DecryptedText from './reactbits/DecryptedText';
-import { AnimatedCircularProgressBar } from './ui/animated-circular-progress-bar';
+import { BRAND } from '@/lib/brand';
 
 import Hero22 from './Hero22';
-import Features13 from './reactbits/Features13';
 import Stats15 from './reactbits/Stats15';
+import Features13 from './reactbits/Features13';
 import HowItWorks7 from './reactbits/HowItWorks7';
-import DailyLeetCodeFeed from './DailyLeetCodeFeed';
 import TaskSteps from './ui/task-steps';
 import Calendar from './ui/calendar';
 import IntegrationsSection from './ui/integrations-3';
 import Faqs01 from './ui/faqs-01';
-
-// Navbar Sections Integrated into Dashboard
-import DailyPlanner from './DailyPlanner';
-import ProblemTracker from './ProblemTracker';
-import RoadmapView from './RoadmapView';
-import RevisionQueue from './RevisionQueue';
-import StatsCharts from './StatsCharts';
+import FeatureBento from './reactbits/FeatureBento';
+import FinalCTA from './reactbits/FinalCTA';
 
 export default function Dashboard({ 
   stats, 
@@ -43,13 +22,15 @@ export default function Dashboard({
   onOpenProblemModal,
   onOpenAuthModal,
   currentUser,
-  setActiveTab 
+  setActiveTab,
+  activeTab,
+  onNavigate
 }) {
   const defaultDsaTasks = [
-    { id: "task-dsa-1", title: "Solve LeetCode #15 3Sum (Two Pointers)", topic: "Arrays", priority: "High", estimatedMinutes: 25, completed: false },
-    { id: "task-dsa-2", title: "Review LRU Cache Design Pattern", topic: "Design", estimatedMinutes: 20, completed: false },
-    { id: "task-dsa-3", title: "Mock Interview Timed Sprint (45m)", topic: "Sprint", estimatedMinutes: 45, completed: false },
-    { id: "task-dsa-4", title: "Log Time & Space Complexity Breakdown", topic: "Analysis", estimatedMinutes: 10, completed: false }
+    { id: "task-dsa-1", title: "Solve 15. 3Sum with two pointers", topic: "Arrays", priority: "High", estimatedMinutes: 25, completed: false },
+    { id: "task-dsa-2", title: "Review the LRU cache design", topic: "Design", estimatedMinutes: 20, completed: false },
+    { id: "task-dsa-3", title: "Timed mock interview", topic: "Sprint", estimatedMinutes: 45, completed: false },
+    { id: "task-dsa-4", title: "Write up time and space complexity", topic: "Analysis", estimatedMinutes: 10, completed: false }
   ];
 
   const activeTaskList = todayTasks.length > 0 ? todayTasks : defaultDsaTasks;
@@ -64,9 +45,11 @@ export default function Dashboard({
     const target = activeTaskList.find(t => t.id === taskId);
     if (!target?.completed) {
       confetti({
-        particleCount: 40,
-        spread: 60,
-        origin: { y: 0.8 }
+        particleCount: 28,
+        spread: 50,
+        origin: { y: 0.8 },
+        colors: ['#0066FF', '#4d8eff', '#a3a9b8'],
+        disableForReducedMotion: true,
       });
     }
   };
@@ -90,158 +73,148 @@ export default function Dashboard({
     };
   });
 
+  // Scroll spy to update activeTab in navbar as user scrolls through sections
+  React.useEffect(() => {
+    const sectionIds = ['overview', 'features', 'today-plan', 'how-it-works', 'integrations', 'faqs'];
+    const handleScroll = () => {
+      const scrollPos = window.scrollY + 220;
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i]);
+        if (el && el.offsetTop <= scrollPos) {
+          if (setActiveTab) setActiveTab(sectionIds[i]);
+          break;
+        }
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [setActiveTab]);
+
+  const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
   return (
-    <div className="space-y-8 animate-fadeIn">
-      
-      {/* Hero Section with Avatars, Social Proof & Target Companies Marquee */}
-      <Hero22
-        stats={stats}
-        todayTasks={todayTasks}
-        onOpenTaskModal={onOpenTaskModal}
-        onOpenProblemModal={onOpenProblemModal}
-        onOpenAuthModal={onOpenAuthModal}
-        currentUser={currentUser}
-        setActiveTab={setActiveTab}
-      />
+    <div className="space-y-24 sm:space-y-32">
 
-      {/* React Bits Pro Stats 15 Block (Coverage Dial with Automation Ledger) */}
-      <Stats15
-        stats={stats}
-        setActiveTab={setActiveTab}
-      />
+      {/* Overview: hero, preview, logos, scheduling */}
+      <div id="overview" className="space-y-24 sm:space-y-32 scroll-mt-24">
+        <Hero22
+          stats={stats}
+          todayTasks={todayTasks}
+          onOpenTaskModal={onOpenTaskModal}
+          onOpenProblemModal={onOpenProblemModal}
+          onOpenAuthModal={onOpenAuthModal}
+          currentUser={currentUser}
+          setActiveTab={setActiveTab}
+          activeTab={activeTab}
+          onNavigate={onNavigate}
+        />
 
-      {/* React Bits Pro Features 13 Block (Accordion List with Live Preview Panel) */}
-      <Features13
-        stats={stats}
-        todayTasks={todayTasks}
-        setActiveTab={setActiveTab}
-        onOpenTaskModal={onOpenTaskModal}
-        onOpenProblemModal={onOpenProblemModal}
-      />
+        <Stats15 stats={stats} setActiveTab={setActiveTab} />
+      </div>
 
-      {/* Main Two-Column Grid: Interactive Today (TaskSteps) & Daily LeetCode Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left 2 Cols: Interactive Today with TaskSteps */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-medium text-white flex items-center gap-2">
-                <span>Today's Plan</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-400 font-mono font-normal">
-                  {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })}
-                </span>
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5 font-normal">
-                Click any step to mark progress. Completed tasks update your streak in real-time.
-              </p>
-            </div>
-            
-            <button
-              onClick={onOpenTaskModal}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/70 hover:bg-white/10 text-white border border-white/15 hover:border-white/30 text-xs font-normal transition-all active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5 text-white stroke-[2]" />
-              <span>Add task</span>
-            </button>
+      <FeatureBento stats={stats} setActiveTab={setActiveTab} onNavigate={onNavigate} />
+
+      <div id="features" className="scroll-mt-24">
+        <Features13
+          stats={stats}
+          todayTasks={todayTasks}
+          setActiveTab={setActiveTab}
+          onOpenTaskModal={onOpenTaskModal}
+          onOpenProblemModal={onOpenProblemModal}
+        />
+      </div>
+
+      {/* Today's plan: the task sequence and this month's solve calendar */}
+      <div id="today-plan" className="scroll-mt-24">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+          <div>
+            <span className="eyebrow">{todayLabel}</span>
+            <h2 className="mt-3 text-[32px] sm:text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-slate-900 dark:text-white">
+              Today’s plan
+            </h2>
+            <p className="mt-2 text-[15px] text-slate-500 dark:text-slate-400">
+              Check off a step when it’s done. Finished tasks count toward your streak.
+            </p>
           </div>
 
-          {/* TaskSteps Interactive Component for Daily Study Plan */}
-          <div className="p-5 rounded-3xl bg-black border border-white/[0.08] shadow-2xl space-y-4 relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-mono uppercase tracking-wider text-slate-300 font-normal">
-                  Daily Study Sprint
-                </span>
-              </div>
-              <span className="text-xs font-mono text-emerald-400 font-normal">
-                {completedCount} / {totalCount} Completed ({progressPercent}%)
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => (onNavigate ? onNavigate('/practice/dsa') : (window.location.pathname = '/practice/dsa'))}
+              className="inline-flex items-center gap-2 h-9 px-3 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
+            >
+              NeetCode 150 planner
+              <ArrowRight className="w-4 h-4 text-slate-500" strokeWidth={1.5} />
+            </button>
+            <button
+              type="button"
+              onClick={onOpenTaskModal}
+              className="inline-flex items-center gap-2 h-9 px-3 rounded-lg text-sm text-slate-900 dark:text-white bg-white dark:bg-ink-800 border border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.14] transition-colors active:scale-[0.98]"
+            >
+              <Plus className="w-4 h-4" strokeWidth={1.5} />
+              Add task
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-ink-850 p-6">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[15px] text-slate-900 dark:text-white">Study sprint</span>
+              <span className="font-mono text-[13px] tabular-nums text-slate-500 dark:text-slate-400">
+                {completedCount} of {totalCount} done · {progressPercent}%
               </span>
             </div>
 
-            {/* Smooth animated progress line */}
-            <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-[#0066FF] to-cyan-400 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progressPercent}%` }}
+            <div className="mt-4 h-1 w-full rounded-full bg-slate-100 dark:bg-white/[0.06] overflow-hidden" aria-hidden>
+              <div
+                className="h-full w-full origin-left rounded-full bg-brand-500 transition-transform duration-500 ease-out"
+                style={{ transform: `scaleX(${progressPercent / 100})` }}
               />
             </div>
 
             <TaskSteps
+              className="mt-6"
               steps={taskStepsData}
               current={completedCount}
               label="Today's task sequence"
               onStepClick={(step) => handleTaskCheck(step.id)}
             />
+
+            <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/[0.06] flex items-center justify-between text-[13px]">
+              <span className="text-slate-500 dark:text-slate-400">
+                {totalCount - completedCount === 0
+                  ? 'Everything on today’s list is done'
+                  : `${totalCount - completedCount} left for today`}
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveTab && setActiveTab('planner')}
+                className="inline-flex items-center gap-1 rounded-md text-brand-600 dark:text-brand-400 hover:underline underline-offset-4"
+              >
+                Manage tasks
+                <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between text-xs text-slate-400">
-            <span>
-              💡 <span className="text-slate-300 font-normal">{completedCount} of {totalCount} tasks completed.</span> Click any item to check off!
-            </span>
-            <button
-              onClick={() => setActiveTab && setActiveTab('planner')}
-              className="text-brand-400 hover:underline font-normal flex items-center gap-1"
-            >
-              Manage Tasks &rarr;
-            </button>
-          </div>
-        </div>
-
-        {/* Right 1 Col: Daily LeetCode Track & Curated Day-by-Day Curriculum */}
-        <div className="space-y-4">
           <Calendar onOpenProblemModal={onOpenProblemModal} />
         </div>
-
       </div>
 
-      {/* ── ALL NAVBAR SECTIONS EMBEDDED DIRECTLY IN DASHBOARD ── */}
-
-      {/* 1. Daily Study Planner Section */}
-      <section id="planner" className="scroll-mt-24 pt-4 border-t border-white/[0.08]">
-        <DailyPlanner setActiveTab={setActiveTab} />
-      </section>
-
-      {/* 2. Problem Tracker Section */}
-      <section id="problems" className="scroll-mt-24 pt-4 border-t border-white/[0.08]">
-        <ProblemTracker setActiveTab={setActiveTab} />
-      </section>
-
-      {/* 3. Structured DSA Roadmap Section */}
-      <section id="roadmap" className="scroll-mt-24 pt-4 border-t border-white/[0.08]">
-        <RoadmapView setActiveTab={setActiveTab} />
-      </section>
-
-      {/* 4. Spaced Repetition Revision Queue Section */}
-      <section id="revision" className="scroll-mt-24 pt-4 border-t border-white/[0.08]">
-        <RevisionQueue setActiveTab={setActiveTab} />
-      </section>
-
-      {/* 5. Performance Intelligence & Analytics Section */}
-      <section id="analytics" className="scroll-mt-24 pt-4 border-t border-white/[0.08]">
-        <StatsCharts setActiveTab={setActiveTab} />
-      </section>
-
-      {/* React Bits Pro How It Works 7 Block (Four Steps around Arched Live Simulator Portal) */}
-      <HowItWorks7
-        setActiveTab={setActiveTab}
-        onOpenProblemModal={onOpenProblemModal}
-      />
-
-      {/* Modern Ecosystem & AI Coding Tools Integration Hub */}
-      <IntegrationsSection
-        onGetStarted={() => setActiveTab && setActiveTab('planner')}
-      />
-
-      {/* Frequently Asked Questions with Mail & WhatsApp Contact */}
-      <div className="rounded-3xl border border-white/10 bg-black/60 backdrop-blur-xl overflow-hidden shadow-2xl">
-        <Faqs01
-          supportEmail="support@codestreak.dev"
-          whatsappNumber="+1234567890"
-        />
+      <div id="how-it-works" className="scroll-mt-24">
+        <HowItWorks7 setActiveTab={setActiveTab} onOpenProblemModal={onOpenProblemModal} />
       </div>
 
+      <div id="integrations" className="scroll-mt-24">
+        <IntegrationsSection onGetStarted={() => setActiveTab && setActiveTab('planner')} />
+      </div>
+
+      <div id="faqs" className="scroll-mt-24">
+        <Faqs01 supportEmail={BRAND.supportEmail} whatsappNumber={BRAND.whatsappNumber} />
+      </div>
+
+      <FinalCTA onOpenProblemModal={onOpenProblemModal} onNavigate={onNavigate} />
     </div>
   );
 }

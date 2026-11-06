@@ -1,21 +1,54 @@
-@import url('https://fonts.googleapis.com/css2?family=Clarity+City:ital,wght@0,100..900;1,100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Josefin+Sans:ital,wght@0,100..700;1,100..700&family=Outfit:wght@100..900&family=Roboto:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400..600&family=Geist+Mono:wght@400..500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Daily Commit, ink ramp.
+  Surfaces, hairlines and text come from these tokens. The brand blue is the only accent.
+*/
+:root {
+  --page: #f5f7fa;
+  --card: #ffffff;
+  --raised: #eceff4;
+  --text: #111827;
+  --text-2: #4b5565;
+  --text-3: #6b7487;
+  --hairline: rgba(17, 24, 39, 0.08);
+  --hairline-strong: rgba(17, 24, 39, 0.14);
+  --accent: #0066ff;
+  --accent-ink: #0052e0;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.dark {
+  --page: #0b0d14;
+  --card: #11141c;
+  --raised: #1a1e28;
+  --text: #eef0f5;
+  --text-2: #a3a9b8;
+  --text-3: #7a8296;
+  --hairline: rgba(238, 240, 245, 0.08);
+  --hairline-strong: rgba(238, 240, 245, 0.14);
+  --accent-ink: #4d8eff;
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
+}
+
 @layer base {
-  *,
-  *::before,
-  *::after {
-    font-family: 'Outfit', 'Inter', sans-serif;
-    font-weight: 400;
+  html {
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
   }
 
   body {
-    font-family: 'Outfit', 'Inter', sans-serif;
-    background-color: #000000;
-    color: #e2e8f0;
+    font-family: 'Geist', system-ui, sans-serif;
+    background-color: var(--page);
+    color: var(--text);
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -23,6 +56,19 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  h1, h2 {
+    letter-spacing: -0.02em;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
   }
 
   strong, b, th, dt {
@@ -30,120 +76,270 @@
   }
 
   button, input, optgroup, select, textarea {
-    font-weight: 400;
+    font-family: inherit;
+  }
+
+  button {
+    transition-property: color, background-color, border-color, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgba(0, 102, 255, 0.3);
+    color: inherit;
+  }
+
+  .tabular-nums, .font-mono {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* Global utility overrides to remove heavy bold and black text across entire website */
+/* Weights stay between 400 and 500; 600 only where a class asks for it on purpose */
 .font-black,
 .font-extrabold,
-.font-bold {
+.font-bold,
+.font-semibold {
   font-weight: 500 !important;
 }
 
-.font-semibold {
-  font-weight: 400 !important;
+/* One entrance: a short fade and rise */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }
 
-/* Glassmorphism custom classes matching TUF / Sleek Dark Theme */
+.animate-fadeIn {
+  animation: fadeIn 0.4s var(--ease) both;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.animate-modalIn {
+  animation: modalIn 0.22s var(--ease) both;
+}
+
+/* Former gradient and glow helpers, kept as names so markup stays valid, now plain */
+.text-gradient-brand {
+  color: var(--accent-ink);
+}
+
+.heading-gradient {
+  color: var(--text) !important;
+}
+
+.surface-highlight {
+  position: relative;
+}
+
+/* Section label: quiet text, no pill, no glowing dot */
+.eyebrow {
+  display: inline-block;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-3);
+  letter-spacing: 0;
+}
+
+/* Primary action: the brand fill with a soft top highlight, no glow */
+.btn-primary-glow {
+  background-color: var(--accent);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.btn-primary-glow:hover {
+  background-color: #0059e0;
+}
+
+.btn-shine {
+  position: relative;
+}
+
+.border-shimmer {
+  border: 1px solid var(--hairline);
+  background: var(--card);
+}
+
+/* Plain raised surfaces with a hairline */
 .glass-panel {
-  background: rgba(12, 17, 26, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+}
+
+html.light .glass-panel {
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.06);
 }
 
 .glass-card {
-  background: rgba(13, 19, 31, 0.65);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  transition: border-color 150ms var(--ease), background-color 150ms var(--ease);
 }
 
 .glass-card:hover {
-  background: rgba(19, 27, 43, 0.8);
-  border-color: rgba(59, 130, 246, 0.35);
-  box-shadow: 0 14px 34px -8px rgba(0, 0, 0, 0.65), 0 0 20px -3px rgba(37, 99, 235, 0.12);
+  border-color: var(--hairline-strong);
 }
 
 .glass-input {
-  background: rgba(10, 14, 23, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #f8fafc;
-  transition: all 0.2s ease;
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  color: var(--text);
+  transition: border-color 150ms var(--ease);
 }
 
 .glass-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 15px -3px rgba(59, 130, 246, 0.35);
+  border-color: var(--accent-ink);
 }
 
-/* Custom Scrollbar */
+@layer components {
+  /* Heatmap cell, the product's signature mark: one filled square per solved day */
+  .cell {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--raised);
+    flex-shrink: 0;
+  }
+  
+  .cell[data-level="1"] { background: rgba(0, 102, 255, 0.28); }
+  .cell[data-level="2"] { background: rgba(0, 102, 255, 0.5); }
+  .cell[data-level="3"] { background: rgba(0, 102, 255, 0.75); }
+  .cell[data-level="4"] { background: var(--accent); }
+}
+
+/* Edge fade for the logo row */
+.mask-fade-x {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Light theme ──
+   Much of the markup was written dark-first with bare text-white or bg-black.
+   These map those utilities onto the light ink ramp. */
+html.light body {
+  background-color: var(--page) !important;
+  color: var(--text) !important;
+}
+
+html.light .bg-black,
+html.light .bg-ink-950,
+html.light .bg-ink-900 {
+  background-color: var(--page);
+}
+
+html.light .bg-ink-850,
+html.light .bg-black\/95,
+html.light .bg-black\/90,
+html.light .bg-black\/85,
+html.light .bg-black\/80,
+html.light .bg-black\/70,
+html.light .bg-black\/60 {
+  background-color: var(--card);
+}
+
+html.light .bg-ink-800,
+html.light .bg-black\/50 {
+  background-color: var(--raised);
+}
+
+html.light .text-white {
+  color: var(--text);
+}
+
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #1f2533;
+}
+
+html.light .text-slate-300 {
+  color: #343b4a;
+}
+
+html.light .text-slate-400 {
+  color: var(--text-2);
+}
+
+html.light .border-white\/\[0\.14\],
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.07\],
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/\[0\.05\],
+html.light .border-white\/\[0\.04\],
+html.light .border-white\/5 {
+  border-color: var(--hairline);
+}
+
+html.light .bg-white\/\[0\.015\],
+html.light .bg-white\/\[0\.02\],
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/5,
+html.light .bg-white\/10 {
+  background-color: rgba(17, 24, 39, 0.03);
+}
+
+html.light .hover\:bg-white\/5:hover,
+html.light .hover\:bg-white\/10:hover {
+  background-color: rgba(17, 24, 39, 0.05);
+}
+
+/* Buttons and selected states that sit on brand fills keep white text in light mode */
+html.light .bg-brand-500.text-white,
+html.light .bg-brand-500 .text-white,
+html.light .btn-primary-glow,
+html.light .btn-primary-glow .text-white {
+  color: #ffffff;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0d1322;
+  background: var(--page);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #233054;
-  border-radius: 4px;
+  background: var(--raised);
+  border-radius: 8px;
+  border: 2px solid var(--page);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #343b4a;
 }
 
-/* Badge styles */
+/* Difficulty labels: quiet text in the semantic tone, no filled pill */
 .badge-easy {
-  @apply bg-emerald-500/15 text-emerald-400 border border-emerald-500/30;
+  @apply text-emerald-600 dark:text-emerald-400;
 }
 
 .badge-medium {
-  @apply bg-amber-500/15 text-amber-400 border border-amber-500/30;
+  @apply text-amber-600 dark:text-amber-400;
 }
 
 .badge-hard {
-  @apply bg-rose-500/15 text-rose-400 border border-rose-500/30;
-}
-
-@keyframes marquee {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-33.333333%);
-  }
-}
-
-@keyframes marquee-reverse {
-  0% {
-    transform: translateX(-33.333333%);
-  }
-  100% {
-    transform: translateX(0%);
-  }
-}
-
-.animate-marquee {
-  display: flex;
-  width: max-content;
-  animation: marquee 30s linear infinite;
-}
-
-.animate-marquee-reverse {
-  display: flex;
-  width: max-content;
-  animation: marquee-reverse 30s linear infinite;
-}
-
-.animate-marquee:hover,
-.animate-marquee-reverse:hover {
-  animation-play-state: paused;
+  @apply text-rose-600 dark:text-rose-400;
 }

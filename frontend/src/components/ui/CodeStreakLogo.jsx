@@ -2,16 +2,14 @@ import React from 'react';
 import ZeroHesitationLogo, { ZeroHesitationEmblem } from './ZeroHesitationLogo';
 
 /**
- * Brand Logo component (Zero Hesitation logo)
+ * Brand logo (Daily Commit). Kept under this name so existing imports keep working.
  */
-export default function CodeStreakLogo({ 
-  className = "", 
-  size = 36, 
-  showText = true, 
-  textSize = "text-xl",
-  streakColor = "#0066FF",
-  textColor = "text-white",
-  animated = false,
+export default function CodeStreakLogo({
+  className = '',
+  size = 20,
+  showText = true,
+  textSize = 'text-[17px]',
+  textColor,
   badge = null,
   subtitle = null,
 }) {
@@ -21,9 +19,7 @@ export default function CodeStreakLogo({
       size={size}
       showText={showText}
       textSize={textSize}
-      blueColor={streakColor === "#FF5500" ? "#0066FF" : streakColor}
       textColor={textColor}
-      animated={animated}
       badge={badge}
       subtitle={subtitle}
     />

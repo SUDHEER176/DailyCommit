@@ -20,12 +20,63 @@ function setLocal(key, val) {
   }
 }
 
+
+// ── Session token ──
+// The backend issues a token at sign-in. Every API call sends it, so the server knows whose data to use.
+export function getToken() {
+  return getLocal('auth_token', null);
+}
+
+function clearSession() {
+  try {
+    localStorage.removeItem('codestreak_auth_token');
+    localStorage.removeItem('codestreak_auth_user');
+  } catch (e) {}
+}
+
+async function apiFetch(url, options = {}) {
+  const token = getToken();
+  const headers = { ...(options.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401 && token && !url.includes('/auth/')) {
+    // Session expired or signed out elsewhere
+    clearSession();
+    window.dispatchEvent(new Event('auth:expired'));
+  }
+  return res;
+}
+
+async function authRequest(path, body) {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10000),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && json.success && json.data?.token) {
+      setLocal('auth_token', json.data.token);
+      setLocal('auth_user', json.data.user);
+      return { success: true, user: json.data.user };
+    }
+    if (json.success && json.data?.pendingVerification) {
+      // Account exists but the email is not confirmed yet: a code was sent
+      return { success: false, pending: true, email: json.data.email, retryAfter: json.data.retryAfter || 60, notice: json.data.notice || null };
+    }
+    return { success: false, error: json.error || 'Something went wrong. Try again' };
+  } catch (e) {
+    return { success: false, error: 'Can’t reach the server. Check that the backend is running' };
+  }
+}
+
 export const api = {
   // Tasks
   async getTasks(date) {
     try {
       const url = date ? `${API_BASE}/tasks?date=${date}` : `${API_BASE}/tasks`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+      const res = await apiFetch(url, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
         const json = await res.json();
         return json.data;
@@ -39,7 +90,7 @@ export const api = {
 
   async createTask(taskData) {
     try {
-      const res = await fetch(`${API_BASE}/tasks`, {
+      const res = await apiFetch(`${API_BASE}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(taskData),
@@ -69,7 +120,7 @@ export const api = {
 
   async toggleTask(id) {
     try {
-      const res = await fetch(`${API_BASE}/tasks/${id}/toggle`, {
+      const res = await apiFetch(`${API_BASE}/tasks/${id}/toggle`, {
         method: 'PATCH',
         signal: AbortSignal.timeout(2000)
       });
@@ -90,7 +141,7 @@ export const api = {
 
   async carryOverTask(id, targetDate) {
     try {
-      const res = await fetch(`${API_BASE}/tasks/${id}/carry-over`, {
+      const res = await apiFetch(`${API_BASE}/tasks/${id}/carry-over`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetDate }),
@@ -116,7 +167,7 @@ export const api = {
 
   async deleteTask(id) {
     try {
-      await fetch(`${API_BASE}/tasks/${id}`, {
+      await apiFetch(`${API_BASE}/tasks/${id}`, {
         method: 'DELETE',
         signal: AbortSignal.timeout(2000)
       });
@@ -137,7 +188,7 @@ export const api = {
       if (filters.needsRevision) params.append('needsRevision', 'true');
       if (filters.search) params.append('search', filters.search);
 
-      const res = await fetch(`${API_BASE}/problems?${params.toString()}`, { signal: AbortSignal.timeout(2000) });
+      const res = await apiFetch(`${API_BASE}/problems?${params.toString()}`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
         const json = await res.json();
         return json.data;
@@ -167,9 +218,28 @@ export const api = {
     return problems;
   },
 
+  async getProblemDetails(slugOrTitle) {
+    try {
+      let slug = slugOrTitle || '';
+      if (slug.includes('leetcode.com/problems/')) {
+        slug = slug.split('problems/')[1].split('/')[0];
+      } else {
+        slug = slug.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase().replace(/^-|-$/g, '');
+      }
+      const res = await apiFetch(`${API_BASE}/problems/details/${slug}`);
+      if (res.ok) {
+        const json = await res.json();
+        return json.data;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch LeetCode problem details", e);
+    }
+    return null;
+  },
+
   async createProblem(probData) {
     try {
-      const res = await fetch(`${API_BASE}/problems`, {
+      const res = await apiFetch(`${API_BASE}/problems`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(probData),
@@ -196,7 +266,7 @@ export const api = {
 
   async toggleRevision(id) {
     try {
-      const res = await fetch(`${API_BASE}/problems/${id}/toggle-revision`, {
+      const res = await apiFetch(`${API_BASE}/problems/${id}/toggle-revision`, {
         method: 'PATCH',
         signal: AbortSignal.timeout(2000)
       });
@@ -217,7 +287,7 @@ export const api = {
 
   async deleteProblem(id) {
     try {
-      await fetch(`${API_BASE}/problems/${id}`, {
+      await apiFetch(`${API_BASE}/problems/${id}`, {
         method: 'DELETE',
         signal: AbortSignal.timeout(2000)
       });
@@ -231,7 +301,7 @@ export const api = {
   // Roadmap
   async getRoadmap() {
     try {
-      const res = await fetch(`${API_BASE}/roadmap`, { signal: AbortSignal.timeout(2000) });
+      const res = await apiFetch(`${API_BASE}/roadmap`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
         const json = await res.json();
         return json.data;
@@ -242,7 +312,7 @@ export const api = {
 
   async toggleRoadmapTopic(weekNum, topicIndex) {
     try {
-      const res = await fetch(`${API_BASE}/roadmap/week/${weekNum}/topic`, {
+      const res = await apiFetch(`${API_BASE}/roadmap/week/${weekNum}/topic`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topicIndex }),
@@ -270,7 +340,7 @@ export const api = {
   // Stats
   async getStats() {
     try {
-      const res = await fetch(`${API_BASE}/stats`, { signal: AbortSignal.timeout(2000) });
+      const res = await apiFetch(`${API_BASE}/stats`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
         const json = await res.json();
         return json.data;
@@ -331,76 +401,227 @@ export const api = {
     };
   },
 
-  // Authentication via Mobile & OTP
-  async sendOtp(phoneNumber, countryCode = '+91') {
+  // ── Accounts: email and password, or Google ──
+  async getAuthConfig() {
     try {
-      const res = await fetch(`${API_BASE}/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber, countryCode }),
-        signal: AbortSignal.timeout(3000)
-      });
-      const json = await res.json();
-      return json;
-    } catch (e) {
-      // Offline fallback
-      const fullPhone = `${countryCode}${phoneNumber.replace(/\D/g, '')}`;
-      return {
-        success: true,
-        message: `OTP sent to ${fullPhone}`,
-        phoneNumber: fullPhone,
-        demoOtp: "123456"
-      };
-    }
+      const res = await apiFetch(`${API_BASE}/auth/config`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) return (await res.json()).data;
+    } catch (e) {}
+    return { accounts: false, googleClientId: null, offline: true };
   },
 
-  async verifyOtp(phoneNumber, otp, name) {
-    try {
-      const res = await fetch(`${API_BASE}/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber, otp, name }),
-        signal: AbortSignal.timeout(3000)
-      });
-      const json = await res.json();
-      if (json.success && json.data) {
-        setLocal('auth_user', json.data.user);
-        setLocal('auth_token', json.data.token);
-      }
-      return json;
-    } catch (e) {
-      if (otp === "123456" || otp.length === 6) {
-        const user = {
-          name: name || "Alex Learner",
-          phoneNumber,
-          isAuthenticated: true,
-          streak: 7
-        };
-        setLocal('auth_user', user);
-        setLocal('auth_token', 'demo_token_123');
-        return { success: true, data: { user, token: 'demo_token_123' } };
-      }
-      return { success: false, error: 'Invalid OTP. Please enter 123456.' };
-    }
+  async register({ name, email, password }) {
+    return authRequest('/auth/register', { name, email, password });
+  },
+
+  async login({ email, password }) {
+    return authRequest('/auth/login', { email, password });
+  },
+
+  async verifyEmail({ email, code }) {
+    return authRequest('/auth/verify-email', { email, code });
+  },
+
+  async resendCode(email) {
+    return authRequest('/auth/resend-code', { email });
+  },
+
+  async loginWithGoogle(credential) {
+    return authRequest('/auth/google', { credential });
   },
 
   async getCurrentUser() {
+    if (!getToken()) return null;
     try {
-      const res = await fetch(`${API_BASE}/auth/me`, { signal: AbortSignal.timeout(2000) });
+      const res = await apiFetch(`${API_BASE}/auth/me`, { signal: AbortSignal.timeout(4000) });
       if (res.ok) {
         const json = await res.json();
+        setLocal('auth_user', json.data);
         return json.data;
       }
+      if (res.status === 401) return null;
     } catch (e) {}
-    return getLocal('auth_user', getLocal('user', initialData.user));
+    // Server unreachable: keep showing the last known profile
+    return getLocal('auth_user', null);
   },
 
   async logout() {
     try {
-      await fetch(`${API_BASE}/auth/logout`, { method: 'POST', signal: AbortSignal.timeout(2000) });
+      await apiFetch(`${API_BASE}/auth/logout`, { method: 'POST', signal: AbortSignal.timeout(3000) });
     } catch (e) {}
-    localStorage.removeItem('codestreak_auth_user');
-    localStorage.removeItem('codestreak_auth_token');
+    clearSession();
+    return true;
+  },
+
+  // ── Personalized DSA Planner API ──
+  async getPlannerQuestions() {
+    try {
+      const res = await apiFetch(`${API_BASE}/planner/questions`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {}
+    const questions = await import('../data/neetcode150.json');
+    return questions.default || [];
+  },
+
+  async getStudyPlan() {
+    try {
+      const res = await apiFetch(`${API_BASE}/planner/plan`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.plan) {
+          setLocal('study_plan', json.plan);
+          return json.plan;
+        }
+      }
+    } catch (e) {}
+    return getLocal('study_plan', null);
+  },
+
+  async generateStudyPlan(config) {
+    try {
+      const res = await apiFetch(`${API_BASE}/planner/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+        signal: AbortSignal.timeout(4000)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.plan) {
+          setLocal('study_plan', json.plan);
+          return json.plan;
+        }
+      }
+    } catch (e) {}
+
+    // Offline fallback
+    const { generateScheduleClient } = await import('../utils/schedulerEngine');
+    const questionsModule = await import('../data/neetcode150.json');
+    const questions = questionsModule.default || [];
+    const existing = getLocal('study_plan', null);
+    const completedIds = [];
+    if (existing && existing.days) {
+      existing.days.forEach(d => d.questions.forEach(q => { if (q.completed) completedIds.push(q.id); }));
+    }
+    const plan = generateScheduleClient({
+      questions,
+      ...config,
+      existingCompletedIds: completedIds
+    });
+    setLocal('study_plan', plan);
+    return plan;
+  },
+
+  async updatePlannedQuestion(questionId, updates) {
+    try {
+      const res = await apiFetch(`${API_BASE}/planner/question/${questionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+        signal: AbortSignal.timeout(3000)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.plan) {
+          setLocal('study_plan', json.plan);
+          return json.plan;
+        }
+      }
+    } catch (e) {}
+
+    // Offline update
+    const plan = getLocal('study_plan', null);
+    if (!plan || !plan.days) return null;
+
+    let updatedQ = null;
+    plan.days.forEach(day => {
+      day.questions.forEach(q => {
+        if (q.id === questionId) {
+          Object.assign(q, updates);
+          if (updates.completed !== undefined) {
+            q.completedAt = updates.completed ? new Date().toISOString() : null;
+          }
+          updatedQ = q;
+        }
+      });
+      day.completedCount = day.questions.filter(q => q.completed).length;
+      day.isFullyCompleted = day.questions.length > 0 && day.questions.every(q => q.completed);
+    });
+
+    if (updatedQ) {
+      if (!plan.revisionQueue) plan.revisionQueue = [];
+      const idx = plan.revisionQueue.findIndex(r => r.id === questionId);
+      if (updatedQ.isDifficult || updatedQ.solveStatus === 'hint' || updatedQ.solveStatus === 'solution') {
+        if (idx === -1) plan.revisionQueue.push({ ...updatedQ, addedAt: new Date().toISOString() });
+        else plan.revisionQueue[idx] = { ...plan.revisionQueue[idx], ...updatedQ };
+      } else if (idx !== -1 && !updatedQ.isDifficult && updatedQ.solveStatus === 'independent') {
+        plan.revisionQueue.splice(idx, 1);
+      }
+    }
+
+    let tot = 0, comp = 0;
+    plan.days.forEach(d => d.questions.forEach(q => { tot++; if (q.completed) comp++; }));
+    plan.completedCount = comp;
+    plan.remainingCount = Math.max(0, tot - comp);
+
+    setLocal('study_plan', plan);
+    return plan;
+  },
+
+  async carryForwardPlannedQuestions() {
+    try {
+      const res = await apiFetch(`${API_BASE}/planner/carry-forward`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(3000)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.plan) {
+          setLocal('study_plan', json.plan);
+          return json.plan;
+        }
+      }
+    } catch (e) {}
+
+    // Offline carry forward
+    const plan = getLocal('study_plan', null);
+    if (!plan || !plan.days) return null;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const overdue = [];
+    plan.days.forEach(day => {
+      if (day.date < todayStr) {
+        const unfin = day.questions.filter(q => !q.completed);
+        unfin.forEach(q => overdue.push(q));
+        day.questions = day.questions.filter(q => q.completed);
+        day.completedCount = day.questions.length;
+        day.isFullyCompleted = true;
+      }
+    });
+    if (overdue.length > 0) {
+      const upcoming = plan.days.filter(d => d.date >= todayStr);
+      if (upcoming.length > 0) {
+        overdue.forEach((q, i) => {
+          const d = upcoming[i % upcoming.length];
+          d.questions.push(q);
+          d.topics = Array.from(new Set(d.questions.map(item => item.topic)));
+          d.totalEstimatedMinutes = d.questions.reduce((a, b) => a + (b.estimatedMinutes || 30), 0);
+          d.completedCount = d.questions.filter(item => item.completed).length;
+          d.isFullyCompleted = d.questions.every(item => item.completed);
+        });
+      }
+    }
+    setLocal('study_plan', plan);
+    return plan;
+  },
+
+  async resetStudyPlan() {
+    try {
+      await apiFetch(`${API_BASE}/planner/reset`, { method: 'POST', signal: AbortSignal.timeout(2000) });
+    } catch (e) {}
+    localStorage.removeItem('codestreak_study_plan');
     return true;
   }
 };

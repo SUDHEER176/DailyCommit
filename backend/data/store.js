@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { AsyncLocalStorage } from 'async_hooks';
+import { hasDatabase, ensureSchema, loadState, loadUserState, upsertUserKeys } from './neon.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -254,39 +256,165 @@ function generateInitialHeatmapData() {
   return result;
 }
 
-// In-memory data copy
-let memoryDb = null;
+// ── Storage ──
+// Routes call getDb() / saveDb() synchronously.
+//
+// Neon mode (DATABASE_URL set): every data request runs inside runAsUser(userId, ...),
+// set by the requireUser middleware. getDb() returns that user's in-memory copy, loaded
+// from the user_state table, and saveDb() writes the collections that changed back to Neon.
+//
+// File mode (no DATABASE_URL): one shared data set in data/db.json, as before. Accounts are off.
+
+const requestUser = new AsyncLocalStorage();
+const userCache = new Map(); // userId -> { data, lastSaved: {key: json}, chain: Promise }
+
+/** Data a brand-new account starts with: the roadmap, nothing done yet */
+export function freshUserData({ name = 'Learner', email = '' } = {}) {
+  const roadmap = JSON.parse(JSON.stringify(defaultData.roadmap)).map((week, i) => ({
+    ...week,
+    status: i === 0 ? 'in-progress' : 'upcoming',
+    progress: 0,
+    completedProblemsCount: 0,
+    topics: week.topics.map((t) => ({ ...t, completed: false })),
+  }));
+  return {
+    user: {
+      name,
+      email,
+      targetRole: '',
+      targetCompany: '',
+      dailyGoal: 3,
+      streak: 0,
+      lastActiveDate: null,
+    },
+    tasks: [],
+    problems: [],
+    roadmap,
+    heatmaps: [],
+  };
+}
+
+export function runAsUser(userId, fn) {
+  return requestUser.run({ userId }, fn);
+}
+
+function currentUserId() {
+  return requestUser.getStore()?.userId || null;
+}
+
+/** Load a user's collections into memory. Call before running a request as that user. */
+export async function loadUserData(userId) {
+  const cached = userCache.get(userId);
+  if (cached) return cached.data;
+  const stored = await loadUserState(userId);
+  const entry = { data: { ...freshUserData(), ...stored }, lastSaved: {}, chain: Promise.resolve() };
+  Object.entries(stored).forEach(([key, value]) => { entry.lastSaved[key] = JSON.stringify(value); });
+  userCache.set(userId, entry);
+  return entry.data;
+}
+
+function flushUser(userId) {
+  const entry = userCache.get(userId);
+  if (!entry) return Promise.resolve();
+  const changed = Object.entries(entry.data).filter(([key, value]) => JSON.stringify(value) !== entry.lastSaved[key]);
+  if (!changed.length) return entry.chain;
+  changed.forEach(([key, value]) => { entry.lastSaved[key] = JSON.stringify(value); });
+  entry.chain = entry.chain
+    .then(() => upsertUserKeys(userId, changed))
+    .catch((err) => {
+      console.error(`[neon] write failed for user ${userId}, will retry on the next save:`, err.message);
+      changed.forEach(([key]) => { delete entry.lastSaved[key]; });
+    });
+  return entry.chain;
+}
+
+/**
+ * Create the starting data for a new account.
+ * The very first account also receives the data that existed before accounts (the legacy app_state rows).
+ */
+export async function seedUserData(userId, { name, email, claimLegacy = false }) {
+  let data = freshUserData({ name, email });
+  if (claimLegacy) {
+    const legacy = await loadState();
+    if (Object.keys(legacy).length) {
+      data = { ...data, ...legacy, user: { ...(legacy.user || {}), name, email } };
+    }
+  }
+  userCache.set(userId, { data, lastSaved: {}, chain: Promise.resolve() });
+  await flushUser(userId);
+  return data;
+}
+
+/** Update the profile collection after a name or email change */
+export async function updateUserProfile(userId, patch) {
+  const data = await loadUserData(userId);
+  data.user = { ...data.user, ...patch };
+  await flushUser(userId);
+}
+
+// ── File mode ──
+let fileDb = null;
+
+function readLocalFile() {
+  try {
+    if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+  } catch (err) {
+    console.error('Error reading db.json:', err.message);
+  }
+  return null;
+}
+
+function writeLocalFile(data) {
+  try {
+    const dir = path.dirname(DB_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving db.json:', err.message);
+  }
+}
+
+/** Call once before the server starts listening */
+export async function initDb() {
+  if (!hasDatabase) {
+    fileDb = readLocalFile() || JSON.parse(JSON.stringify(defaultData));
+    if (!fs.existsSync(DB_FILE)) writeLocalFile(fileDb);
+    return { mode: 'file' };
+  }
+  await ensureSchema();
+  return { mode: 'neon' };
+}
 
 export function getDb() {
-  if (memoryDb) return memoryDb;
-  
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      const content = fs.readFileSync(DB_FILE, 'utf-8');
-      memoryDb = JSON.parse(content);
-    } else {
-      memoryDb = JSON.parse(JSON.stringify(defaultData));
-      saveDb(memoryDb);
-    }
-  } catch (err) {
-    console.error("Error loading DB file, using default dataset:", err);
-    memoryDb = JSON.parse(JSON.stringify(defaultData));
+  if (hasDatabase) {
+    const userId = currentUserId();
+    const entry = userId && userCache.get(userId);
+    if (!entry) throw new Error('getDb() called outside a signed-in request');
+    return entry.data;
   }
-  return memoryDb;
+  if (!fileDb) fileDb = readLocalFile() || JSON.parse(JSON.stringify(defaultData));
+  return fileDb;
 }
 
 export function saveDb(data) {
-  memoryDb = data;
-  try {
-    const dir = path.dirname(DB_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error("Error saving DB to disk:", err);
+  if (hasDatabase) {
+    const userId = currentUserId();
+    const entry = userId && userCache.get(userId);
+    if (!entry) throw new Error('saveDb() called outside a signed-in request');
+    entry.data = data;
+    flushUser(userId);
+    return;
   }
+  fileDb = data;
+  writeLocalFile(data);
 }
+
+/** Wait for pending Neon writes, for example before shutting down */
+export function flushDb() {
+  return Promise.all([...userCache.values()].map((e) => e.chain));
+}
+
+export const storageMode = hasDatabase ? 'neon' : 'file';
 
 export const db = {
   read: getDb,
@@ -294,8 +422,9 @@ export const db = {
 };
 
 export default {
+  initDb,
   getDb,
   saveDb,
+  flushDb,
   db
 };
-
