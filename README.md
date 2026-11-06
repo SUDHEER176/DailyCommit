@@ -1,4 +1,4 @@
-# 🔥 CodeStreak — Full-Stack DSA Learning Planner & Problem Tracker
+# 🔥 DailyCommit — Full-Stack DSA Learning Planner & Problem Tracker
 
 <div align="center">
 
