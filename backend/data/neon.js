@@ -71,6 +71,22 @@ export async function ensureSchema() {
       PRIMARY KEY (email, purpose)
     )
   `);
+  // Pro: an account is Pro while plan_expires_at is in the future
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at timestamptz');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS payments (
+      order_id    text PRIMARY KEY,
+      user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      plan_id     text NOT NULL,
+      amount      int  NOT NULL,
+      currency    text NOT NULL,
+      status      text NOT NULL DEFAULT 'created',
+      payment_id  text UNIQUE,
+      created_at  timestamptz NOT NULL DEFAULT now(),
+      paid_at     timestamptz
+    )
+  `);
+  await pool.query('CREATE INDEX IF NOT EXISTS payments_user_idx ON payments (user_id)');
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_state (
       user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,

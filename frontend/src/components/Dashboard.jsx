@@ -112,7 +112,7 @@ export default function Dashboard({
         <Stats15 stats={stats} setActiveTab={setActiveTab} />
       </div>
 
-      <FeatureBento stats={stats} setActiveTab={setActiveTab} onNavigate={onNavigate} />
+      <FeatureBento stats={stats} setActiveTab={setActiveTab} onNavigate={onNavigate} signedIn={Boolean(currentUser?.isAuthenticated)} />
 
       <div id="features" className="scroll-mt-24">
         <Features13

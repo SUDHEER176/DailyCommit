@@ -57,9 +57,54 @@ router.get('/', (req, res) => {
     last7Days.push({ day: dayName, date: dateStr, solved });
   }
 
+  // Solve activity by day (logged problems plus completed plan questions, each counted once)
+  const seen = new Set();
+  const activity = {};
+  const mark = (when, title) => {
+    if (!when) return;
+    const date = String(when).slice(0, 10);
+    const key = `${date}|${String(title || '').trim().toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    activity[date] = (activity[date] || 0) + 1;
+  };
+  problems.forEach((p) => mark(p.solvedAt, p.title));
+  const planDays = db.studyPlan?.days || [];
+  planDays.forEach((d) => (d.questions || []).forEach((q) => q.completed && mark(q.completedAt, q.title)));
+  const firstSolvedAt = Object.keys(activity).sort()[0] || null;
+
+  // Plan summary: totals by difficulty and the target date (the last day of the plan)
+  let plan = null;
+  if (planDays.length) {
+    const byDifficulty = { Easy: { total: 0, done: 0 }, Medium: { total: 0, done: 0 }, Hard: { total: 0, done: 0 } };
+    planDays.forEach((d) => (d.questions || []).forEach((q) => {
+      const b = byDifficulty[q.difficulty];
+      if (!b) return;
+      b.total += 1;
+      if (q.completed) b.done += 1;
+    }));
+    plan = {
+      total: Object.values(byDifficulty).reduce((n, b) => n + b.total, 0),
+      completed: Object.values(byDifficulty).reduce((n, b) => n + b.done, 0),
+      targetDate: planDays[planDays.length - 1].date,
+      byDifficulty,
+    };
+  }
+
+  // Problems waiting for revision, oldest solve first
+  const revisionDue = problems
+    .filter((p) => p.needsRevision)
+    .sort((a, b) => String(a.solvedAt || '').localeCompare(String(b.solvedAt || '')))
+    .slice(0, 3)
+    .map((p) => ({ title: p.title, solvedAt: p.solvedAt || null }));
+
   res.json({
     success: true,
     data: {
+      activity,
+      firstSolvedAt,
+      plan,
+      revisionDue,
       user: db.user,
       totalProblemsSolved: problems.length,
       difficultyCounts,

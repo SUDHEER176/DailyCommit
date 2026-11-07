@@ -1,6 +1,7 @@
 import React from 'react';
 import { CalendarCheck, Code2, Map, RotateCcw, BarChart3, CheckCircle2 } from 'lucide-react';
 import { BRAND } from '@/lib/brand';
+import { addDays, dayKey, levelFor, parseDay } from '@/lib/userData';
 
 // 20 weeks of solve history, deterministic so it renders the same every time.
 // The last three weeks are an unbroken run, which is the streak the header counts.
@@ -32,11 +33,37 @@ const K = ({ children }) => <span className="text-brand-600 dark:text-brand-400"
 const N = ({ children }) => <span className="text-amber-600 dark:text-amber-300">{children}</span>;
 const C = ({ children }) => <span className="text-slate-500">{children}</span>;
 
-export default function ProductPreview({ stats = {} }) {
-  // A sample learner, so the preview always shows a full picture
-  const streak = 21;
-  const solved = 142;
-  const inRevision = 3;
+const monthShort = (d) => d.toLocaleDateString('en-GB', { month: 'short' });
+const daysAgo = (iso) => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const today = new Date();
+  return Math.max(0, Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000));
+};
+
+export default function ProductPreview({ stats = {}, signedIn = false }) {
+  // Signed in: the person's real numbers. Signed out: a sample learner, tagged "Example"
+  const today = new Date();
+  const start = addDays(today, 1 - WEEKS * 7);
+  const streak = signedIn ? stats?.user?.streak ?? 0 : 21;
+  const solved = signedIn ? stats?.totalProblemsSolved ?? 0 : 142;
+  const inRevision = signedIn ? stats?.revisionCount ?? 0 : 3;
+  const cells = signedIn
+    ? Array.from({ length: WEEKS * 7 }, (_, i) => levelFor(stats?.activity?.[dayKey(addDays(start, i))] || 0))
+    : heat;
+  // Each month in the 20 week window once, oldest first (at most 5)
+  const monthLabels = signedIn
+    ? [...new Set(Array.from({ length: WEEKS }, (_, w) => monthShort(addDays(start, w * 7 + 3))))].slice(-5)
+    : months;
+  const since = signedIn
+    ? (stats?.firstSolvedAt ? `solved since ${parseDay(stats.firstSolvedAt).toLocaleDateString('en-GB', { month: 'long' })}` : 'solved')
+    : 'solved since July';
+  const dueList = signedIn
+    ? (stats?.revisionDue || []).map((d) => {
+        const n = daysAgo(d.solvedAt);
+        return { title: d.title, when: n == null ? '' : n === 0 ? 'Solved today' : `Solved ${n} ${n === 1 ? 'day' : 'days'} ago` };
+      })
+    : due;
 
   return (
     <div className="relative mt-16 sm:mt-20 animate-fadeIn" style={{ animationDelay: '80ms' }}>
@@ -49,7 +76,7 @@ export default function ProductPreview({ stats = {} }) {
             <span className="w-2.5 h-2.5 rounded-full bg-slate-200 dark:bg-white/[0.12]" />
           </div>
           <span className="mx-auto font-mono text-xs text-slate-500">{BRAND.domain}/today</span>
-          <span className="w-12" aria-hidden />
+          <span className="w-12 text-right text-xs text-slate-500">{signedIn ? '' : 'Example'}</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)] lg:grid-cols-[200px_minmax(0,1fr)_360px]">
@@ -119,18 +146,18 @@ export default function ProductPreview({ stats = {} }) {
                 </div>
                 <div className="text-right">
                   <div className="font-mono text-[15px] tabular-nums text-slate-900 dark:text-white">{solved}</div>
-                  <div className="mt-1 text-xs text-slate-500">solved since July</div>
+                  <div className="mt-1 text-xs text-slate-500">{since}</div>
                 </div>
               </div>
 
               <div className="mt-6 overflow-hidden">
                 <div className="grid grid-flow-col grid-rows-7 gap-[3px] justify-start" aria-label="Solve history, last 20 weeks">
-                  {heat.map((lvl, i) => (
+                  {cells.map((lvl, i) => (
                     <span key={i} className="cell !w-[11px] !h-[11px] lg:!w-3 lg:!h-3" data-level={lvl} />
                   ))}
                 </div>
                 <div className="mt-2 flex justify-between font-mono text-[11px] text-slate-500 pr-2">
-                  {months.map((m) => <span key={m}>{m}</span>)}
+                  {monthLabels.map((m, i) => <span key={i}>{m}</span>)}
                 </div>
               </div>
             </div>
@@ -138,10 +165,13 @@ export default function ProductPreview({ stats = {} }) {
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-[13px] text-slate-900 dark:text-white">Due for revision</span>
-                <span className="font-mono text-xs tabular-nums text-slate-500">{due.length} today</span>
+                <span className="font-mono text-xs tabular-nums text-slate-500">{signedIn ? `${inRevision} waiting` : `${due.length} today`}</span>
               </div>
               <ul className="mt-2 divide-y divide-slate-200 dark:divide-white/[0.06]">
-                {due.map((d) => (
+                {dueList.length === 0 && (
+                  <li className="flex items-center h-10 text-[13px] text-slate-500">Nothing waiting for revision</li>
+                )}
+                {dueList.map((d) => (
                   <li key={d.title} className="flex items-center justify-between gap-4 h-10">
                     <span className="text-[13px] text-slate-700 dark:text-slate-300 truncate">{d.title}</span>
                     <span className="font-mono text-xs text-slate-500 flex-shrink-0">{d.when}</span>

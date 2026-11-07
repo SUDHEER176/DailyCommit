@@ -2,8 +2,8 @@ import React from 'react';
 import {
   CheckSquare,
   Timer,
-  Plus,
   User,
+  Flame,
   Sun,
   Moon,
   Layers,
@@ -50,7 +50,11 @@ export default function Navbar({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const onPricing = typeof window !== 'undefined' && window.location.pathname === '/pricing';
+
   const handleNavClick = (tabId) => {
+    // Section links live on the home page, so leave other pages first
+    if (window.location.pathname !== '/' && onNavigate) onNavigate('/');
     setActiveTab(tabId);
     if (tabId === 'overview') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -73,19 +77,19 @@ export default function Navbar({
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center h-16 gap-8">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center h-16 gap-4">
           <button
             type="button"
             onClick={() => handleNavClick('overview')}
-            className="flex items-center rounded-lg"
+            className="justify-self-start flex items-center rounded-lg"
             aria-label="Daily Commit home"
           >
             <CodeStreakLogo size={20} textSize="text-[17px]" />
           </button>
 
-          <nav aria-label="Sections" className="hidden lg:flex items-center gap-1">
+          <nav aria-label="Sections" className="hidden lg:flex items-center justify-center gap-1">
             {navTabs.slice(1).map((item) => {
-              const isActive = activeTab === item.id;
+              const isActive = !onPricing && activeTab === item.id;
               return (
                 <button
                   key={item.id}
@@ -103,20 +107,43 @@ export default function Navbar({
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('/pricing')}
+              aria-current={onPricing ? 'page' : undefined}
+              className={cn(
+                'h-8 px-3 rounded-lg text-sm transition-colors',
+                onPricing
+                  ? 'text-slate-900 dark:text-white bg-slate-100 dark:bg-white/[0.06]'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              )}
+            >
+              Pricing
+            </button>
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
-            {/* Streak readout: the signature cell plus the count */}
-            <div
-              className="hidden sm:flex items-center gap-2 h-8 px-2 text-sm text-slate-600 dark:text-slate-300"
-              title={`${streak} day streak`}
-            >
-              <span className="cell" data-level="4" aria-hidden />
-              <span className="font-mono tabular-nums text-slate-900 dark:text-white">{streak}</span>
-              <span className="text-slate-500">day streak</span>
-            </div>
+          <div className="col-start-3 justify-self-end flex items-center gap-1">
+            {/* Signed out there is no streak to show (streak is null) */}
+            {streak != null && (
+              <>
+              {/* Streak readout: a flame and the day count */}
+              <div
+                className="hidden sm:flex items-center gap-1 h-8 px-2 text-sm"
+                title={`${streak} day streak`}
+                aria-label={`${streak} day streak`}
+              >
+                <Flame
+                  size={16}
+                  strokeWidth={1.5}
+                  className={streak > 0 ? 'text-amber-500 fill-amber-500/20' : 'text-slate-400 dark:text-slate-500'}
+                  aria-hidden
+                />
+                <span className="font-mono tabular-nums text-slate-900 dark:text-white">{streak}</span>
+              </div>
 
-            <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-white/[0.08]" aria-hidden />
+              <span className="hidden sm:block w-px h-4 mx-1 bg-slate-200 dark:bg-white/[0.08]" aria-hidden />
+              </>
+            )}
 
             <button
               type="button"
@@ -142,10 +169,10 @@ export default function Navbar({
             <button
               type="button"
               onClick={onOpenAuthModal}
-              className="hidden md:inline-flex items-center gap-2 h-8 px-3 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="hidden md:inline-flex items-center gap-2 h-8 px-3 ml-2 rounded-lg text-sm text-slate-900 dark:text-white border border-slate-200 dark:border-white/[0.1] hover:border-slate-300 dark:hover:border-white/[0.18] hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors"
               title={signedIn ? `Signed in as ${currentUser.name}` : 'Sign in'}
             >
-              {signedIn && <User size={16} strokeWidth={1.5} />}
+              {signedIn && <User size={16} strokeWidth={1.5} className="text-slate-500 dark:text-slate-400" />}
               {signedIn ? currentUser.name?.split(' ')[0] || 'Profile' : 'Sign in'}
             </button>
 
@@ -158,15 +185,6 @@ export default function Navbar({
               <User size={16} strokeWidth={1.5} />
             </button>
 
-            <button
-              type="button"
-              onClick={onOpenProblemModal}
-              className="btn-primary-glow inline-flex items-center gap-2 h-8 px-3 rounded-lg text-sm font-medium active:scale-[0.98]"
-            >
-              <Plus size={16} strokeWidth={1.5} />
-              <span className="hidden sm:inline">Log problem</span>
-              <span className="sm:hidden">Log</span>
-            </button>
           </div>
         </div>
       </div>

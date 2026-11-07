@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { addDays, shortDate, dayKey, levelFor } from '@/lib/userData';
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -36,10 +37,75 @@ function CardText({ title, children }) {
 }
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const CAL_WEEKS = 5;
 
-export default function FeatureBento({ stats = {}, setActiveTab, onNavigate }) {
-  const streak = stats?.user?.streak ?? 7;
-  const filledDays = Math.max(1, Math.min(streak, 7));
+
+/**
+ * The last five weeks as a calendar. The current streak is one unbroken chain ending today;
+ * older days show lighter solve history, and the day before the streak is the break.
+ */
+function StreakCalendar({ streak, activity }) {
+  const today = new Date();
+  const todayIndex = (CAL_WEEKS - 1) * 7 + ((today.getDay() + 6) % 7); // Monday first
+  const cells = Array.from({ length: CAL_WEEKS * 7 }, (_, k) => {
+    const ago = todayIndex - k;
+    const date = addDays(today, -ago);
+    const inRun = ago >= 0 && ago < streak;
+    let level = 0;
+    if (ago >= 0 && !inRun) {
+      if (activity) {
+        // Real solves: older days get a quiet tint, so the current chain stays the bright thing
+        level = Math.min(2, levelFor(activity[dayKey(date)] || 0));
+      } else if (ago !== streak) {
+        // Example history for visitors; the day before the streak is always the break
+        const h = (((k + 3) * 2654435761) >>> 0) % 10;
+        level = h < 5 ? 1 : 0;
+      }
+    }
+    return { k, ago, date, inRun, level };
+  });
+  const run = (k) => cells[k]?.inRun;
+
+  return (
+    <div className="flex-1 sm:max-w-[440px] sm:ml-auto" role="img" aria-label={`Last ${CAL_WEEKS} weeks, current streak ${streak} days ending today`}>
+      <div className="grid grid-cols-7">
+        {days.map((d) => (
+          <span key={d} className="pb-2 text-center font-mono text-[11px] text-slate-500">{d}</span>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-1">
+        {cells.map((c) => {
+          const col = c.k % 7;
+          const joinLeft = c.inRun && col > 0 && run(c.k - 1);
+          const joinRight = c.inRun && col < 6 && run(c.k + 1);
+          const isToday = c.ago === 0;
+          return (
+            <div key={c.k} className={`h-8 ${joinLeft ? '' : 'pl-0.5'} ${joinRight ? '' : 'pr-0.5'}`}>
+              <span
+                data-level={c.inRun ? undefined : c.level}
+                className={`h-full grid place-items-center font-mono text-[11px] tabular-nums ${
+                  c.inRun
+                    ? `bg-brand-500 text-white ${joinLeft ? '' : 'rounded-l-md'} ${joinRight ? '' : 'rounded-r-md'}`
+                    : `cell !w-full !h-full !rounded-md ${c.ago < 0 ? 'opacity-40 text-slate-400 dark:text-slate-600' : 'text-slate-500'}`
+                }`}
+              >
+                <span className={`relative ${isToday && !c.inRun ? 'text-brand-600 dark:text-brand-400' : ''}`}>
+                  {c.date.getDate()}
+                  {isToday && <span className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-1 h-1 rounded-full bg-current" />}
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default function FeatureBento({ stats = {}, setActiveTab, onNavigate, signedIn = false }) {
+  // Signed in: the real streak and solve days. Signed out: an example week, tagged as such
+  const streak = signedIn ? (stats?.user?.streak ?? 0) : 7;
+  const activity = signedIn ? stats?.activity || {} : null;
   const go = (tab) => () => {
     if (setActiveTab) setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -69,20 +135,14 @@ export default function FeatureBento({ stats = {}, setActiveTab, onNavigate }) {
           <div className="flex flex-col sm:flex-row sm:items-end gap-8">
             <div className="flex-shrink-0">
               <div className="font-mono text-[48px] leading-none font-medium tabular-nums text-slate-900 dark:text-white">{streak}</div>
-              <div className="mt-2 text-[13px] text-slate-500 dark:text-slate-400">day streak</div>
+              <div className="mt-2 text-[13px] text-slate-500 dark:text-slate-400">
+                day streak{!signedIn && <span className="ml-2 text-xs text-slate-500">Example</span>}
+              </div>
+              {streak > 0 && (
+                <div className="mt-1 font-mono text-xs text-slate-500 tabular-nums">since {shortDate(addDays(new Date(), 1 - streak))}</div>
+              )}
             </div>
-            <div className="flex-1 grid grid-cols-7 gap-2">
-              {days.map((d, i) => (
-                <div key={d} className="flex flex-col items-center gap-2">
-                  <span
-                    className="cell !w-full !h-auto aspect-square max-w-[40px] !rounded-md"
-                    data-level={i < filledDays ? 4 : 0}
-                    aria-label={`${d}: ${i < filledDays ? 'solved' : 'not yet'}`}
-                  />
-                  <span className="font-mono text-[11px] text-slate-500">{d}</span>
-                </div>
-              ))}
-            </div>
+            <StreakCalendar streak={streak} activity={activity} />
           </div>
           <CardText title="Streaks that stick">
             A daily goal and a solve heatmap turn consistency into something you can see.

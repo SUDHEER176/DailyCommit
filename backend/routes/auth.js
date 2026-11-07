@@ -2,6 +2,7 @@ import express from 'express';
 import { hasDatabase, query } from '../data/neon.js';
 import { loadUserData, seedUserData, updateUserProfile } from '../data/store.js';
 import { sendVerificationCode, mailConfigured } from '../data/mailer.js';
+import { proStatus } from '../data/billing.js';
 import {
   requireUser, bearerToken, createSession, deleteSession,
   hashPassword, checkPassword, normalizeEmail, isValidEmail,
@@ -26,6 +27,7 @@ async function publicUser(row) {
     hasPassword: Boolean(row.password_hash),
     googleLinked: Boolean(row.google_sub),
     streak: data.user?.streak ?? 0,
+    ...proStatus(row),
     isAuthenticated: true,
   };
 }

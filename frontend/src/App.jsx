@@ -14,6 +14,7 @@ import RevisionQueue from './components/RevisionQueue';
 import StatsCharts from './components/StatsCharts';
 import PracticeHub from './components/PracticeHub';
 import CodeWorkspace from './components/CodeWorkspace/CodeWorkspace';
+import PricingPage from './components/PricingPage';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
@@ -265,7 +266,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onNavigate={navigate}
-        streak={stats.user?.streak || 7}
+        streak={currentUser?.isAuthenticated ? (stats.user?.streak ?? 0) : null}
         onOpenTaskModal={() => setIsTaskModalOpen(true)}
         onOpenProblemModal={() => setIsProblemModalOpen(true)}
         onOpenCodeEditor={() => handleOpenCodeEditor()}
@@ -278,6 +279,13 @@ export default function App() {
 
       {/* Main Content Area: Dynamic View based on activeTab */}
       <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {currentPath === '/pricing' ? (
+          <PricingPage
+            currentUser={currentUser}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            onUserUpdate={(pro) => setCurrentUser((u) => (u ? { ...u, ...pro } : u))}
+          />
+        ) : (<>
         {activeTab === 'planner' && (
               <DailyPlanner
                 setActiveTab={setActiveTab}
@@ -334,6 +342,7 @@ export default function App() {
                 onNavigate={navigate}
               />
             )}
+        </>)}
       </main>
 
       {/* Footer 12 */}

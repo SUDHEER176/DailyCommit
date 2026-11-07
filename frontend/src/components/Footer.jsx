@@ -7,6 +7,7 @@ const NAV_LINKS = {
   Product: [
     { label: 'Overview', href: '#overview' },
     { label: 'Practice hub', href: '#explore' },
+    { label: 'Pricing', href: '#pricing' },
     { label: 'Features', href: '#features' },
     { label: "Today's plan", href: '#today-plan' },
     { label: 'How it works', href: '#how-it-works' },
@@ -46,6 +47,10 @@ export default function Footer({ setActiveTab, onNavigate }) {
     if (link.external || !link.href.startsWith('#')) return;
     e.preventDefault();
     const tabId = link.href.slice(1);
+    if (tabId === 'pricing') {
+      if (onNavigate) onNavigate('/pricing');
+      return;
+    }
     if (tabId === 'explore') {
       if (onNavigate) onNavigate('/practice/dsa');
       else {
@@ -55,9 +60,14 @@ export default function Footer({ setActiveTab, onNavigate }) {
       return;
     }
     if (setActiveTab) setActiveTab(tabId);
-    const el = document.getElementById(tabId);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    else window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Sections live on the home page, so leave other pages (like Pricing) first
+    const leaving = window.location.pathname !== '/' && onNavigate;
+    if (leaving) onNavigate('/');
+    setTimeout(() => {
+      const el = document.getElementById(tabId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      else window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, leaving ? 80 : 0);
   };
 
   return (

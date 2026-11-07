@@ -47,6 +47,22 @@ async function apiFetch(url, options = {}) {
   return res;
 }
 
+async function billingPost(path, body) {
+  try {
+    const res = await apiFetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && json.success) return { success: true, data: json.data };
+    return { success: false, status: res.status, error: json.error || 'Something went wrong. Try again' };
+  } catch (e) {
+    return { success: false, error: 'Can’t reach the server. Check that the backend is running' };
+  }
+}
+
 async function authRequest(path, body) {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -443,6 +459,24 @@ export const api = {
     } catch (e) {}
     // Server unreachable: keep showing the last known profile
     return getLocal('auth_user', null);
+  },
+
+  // ── Pro and payments ──
+  async getBillingPlans() {
+    try {
+      const res = await apiFetch(`${API_BASE}/billing/plans`, { signal: AbortSignal.timeout(4000) });
+      const json = await res.json();
+      if (res.ok) return json.data;
+    } catch (e) {}
+    return { plans: [], enabled: false, offline: true };
+  },
+
+  async startCheckout(planId) {
+    return billingPost('/billing/order', { planId });
+  },
+
+  async verifyPayment({ orderId, paymentId, signature }) {
+    return billingPost('/billing/verify', { orderId, paymentId, signature });
   },
 
   async logout() {

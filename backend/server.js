@@ -7,6 +7,7 @@ import roadmapRouter from './routes/roadmap.js';
 import statsRouter from './routes/stats.js';
 import authRouter from './routes/auth.js';
 import plannerRouter from './routes/planner.js';
+import billingRouter, { webhookHandler, billingStatus } from './routes/billing.js';
 import { initDb, flushDb, storageMode } from './data/store.js';
 import { pool, ping } from './data/neon.js';
 import { requireUser, googleClientId } from './data/auth.js';
@@ -19,6 +20,8 @@ app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 }));
+// Razorpay signs the exact bytes it sends, so the webhook reads the raw body before JSON parsing
+app.post('/api/billing/webhook', express.raw({ type: 'application/json', limit: '1mb' }), webhookHandler);
 app.use(express.json({ limit: '2mb' }));
 
 // Sign-in routes are public; every data route needs a signed-in user (in Neon mode)
@@ -29,6 +32,7 @@ app.use('/api/problems', (req, res, next) => (req.method === 'GET' && req.path.s
 app.use('/api/roadmap', requireUser, roadmapRouter);
 app.use('/api/stats', requireUser, statsRouter);
 app.use('/api/planner', requireUser, plannerRouter);
+app.use('/api/billing', billingRouter);
 
 // Health check, including the database connection
 app.get('/api/health', async (req, res) => {
@@ -49,6 +53,10 @@ async function start() {
     const info = await initDb();
     if (info.mode === 'neon') {
       console.log(`[neon] connected. Accounts on: email and password${googleClientId ? ', Google' : ' (Google off, set GOOGLE_CLIENT_ID to enable)'}`);
+      const billing = billingStatus();
+      console.log(billing.configured
+        ? `[billing] Razorpay on (${billing.testMode ? 'test mode' : 'LIVE mode'})${billing.webhook ? ', webhook on' : ', webhook off (set RAZORPAY_WEBHOOK_SECRET)'}`
+        : '[billing] Razorpay off, set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to take payments');
       if (mailConfigured) {
         verifyMailer()
           .then(() => console.log('[mail] SMTP ready, verification codes will be emailed'))
