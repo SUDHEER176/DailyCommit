@@ -1,6 +1,6 @@
 import { initialData } from '../data/initialData';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Helper to interact with localStorage as smooth fallback
 function getLocal(key, defaultVal) {
