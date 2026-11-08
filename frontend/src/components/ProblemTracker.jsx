@@ -6,6 +6,7 @@ import {
   Code2, Tag, Clock, ArrowUpDown, Sparkles
 } from 'lucide-react';
 import { api } from '../services/api';
+import { PageLoader } from './ui/Spinner';
 
 export default function ProblemTracker({ onOpenProblemModal, setActiveTab, onOpenCodeEditor }) {
   const [problems, setProblems] = useState([]);
@@ -172,10 +173,14 @@ export default function ProblemTracker({ onOpenProblemModal, setActiveTab, onOpe
       {/* Problem Grid */}
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
-          <span>Showing {filteredProblems.length} of {problems.length} Problems</span>
+          <span>{loading ? 'Loading problems' : `Showing ${filteredProblems.length} of ${problems.length} Problems`}</span>
         </div>
 
-        {filteredProblems.length === 0 ? (
+        {loading ? (
+          <div className="rounded-2xl bg-white dark:bg-black/60 border border-slate-200 dark:border-white/[0.08]">
+            <PageLoader label="Loading your problems" className="py-16" />
+          </div>
+        ) : filteredProblems.length === 0 ? (
           <div className="p-12 text-center rounded-2xl bg-white dark:bg-black/60 border border-slate-200 dark:border-white/[0.08]">
             <Code2 className="w-10 h-10 mx-auto text-slate-400 mb-2 stroke-[1.5]" />
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">No problems found</p>

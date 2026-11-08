@@ -60,7 +60,7 @@ const CoverageDial = ({ percentage = 82, baseline = 54 }) => {
             Baseline <span className="font-mono tabular-nums">{baseline}%</span>
           </span>
         </div>
-        <p className="text-xs text-slate-500">Measured across 84 interview problems</p>
+        <p className="text-xs text-slate-500">Example learner, 84 interview problems logged</p>
       </figcaption>
     </figure>
   );
@@ -105,7 +105,8 @@ export default function Stats15({ stats = {}, setActiveTab = () => {} }) {
             so you spend the hour solving instead of choosing what to solve.
           </p>
 
-          <ul className="mt-10 border-t border-slate-200 dark:border-white/[0.08]">
+          <p className="mt-10 mb-2 text-xs text-slate-500">Example week</p>
+          <ul className="border-t border-slate-200 dark:border-white/[0.08]">
             {ledgerItems.map((item) => (
               <li key={item.title} className="border-b border-slate-200 dark:border-white/[0.08]">
                 <button

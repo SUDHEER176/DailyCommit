@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  AlertTriangle, ArrowRight, Check, ChevronDown, Flame, ChevronLeft, ChevronRight, Code2, ExternalLink,
-  FileText, PlayCircle, RefreshCw, Search, Sliders, Star
+  AlertTriangle, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Code2, ExternalLink,
+  FileText, PlayCircle, Search, Sliders, Star
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api } from '../../services/api';
@@ -9,9 +9,10 @@ import PlannerWizardModal from './PlannerWizardModal';
 import TopicRoadmap from './TopicRoadmap';
 import { AchievementsCard, buildAchievements } from '../StreakAndAchievements';
 import CodeWorkspace from '../CodeWorkspace/CodeWorkspace';
+import { PageLoader } from '../ui/Spinner';
 import neetcodeList from '../../data/neetcode150.json';
 
-// Topic and problem order of the NeetCode 150 list, used by the sheet view
+// Topic and problem order of the DailyCode 150 list, used by the sheet view
 const TOPIC_ORDER = Array.from(new Set(neetcodeList.map((p) => p.topic)));
 const ORDER_INDEX = Object.fromEntries(neetcodeList.map((p, i) => [p.id, i]));
 const topicAnchor = (topic) => 'topic-' + topic.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -76,11 +77,20 @@ export default function PersonalizedPlannerView({
   }, [plan]);
 
   // Handle plan generation from wizard
+  const plannerTopRef = React.useRef(null);
   const handlePlanGenerated = async (config) => {
     const newPlan = await api.generateStudyPlan(config);
     setPlan(newPlan);
     if (newPlan && newPlan.days) {
-      setSelectedDayNum(1);
+      // Open the new plan on the first day that has work left, usually today's Day 1
+      const firstOpen = newPlan.days.find((d) => !d.isFullyCompleted) || newPlan.days[0];
+      setSelectedDayNum(firstOpen.dayNumber);
+      setActiveTab('daily');
+      setOpenTopics(new Set());
+      // Wait for the wizard to close and the plan to render, then bring the plan into view
+      setTimeout(() => {
+        plannerTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
     }
   };
 
@@ -454,10 +464,7 @@ export default function PersonalizedPlannerView({
 
   if (loading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center gap-3 text-[13px] text-slate-500">
-        <RefreshCw className="w-4 h-4 animate-spin" strokeWidth={1.5} />
-        Loading your plan
-      </div>
+      <PageLoader label="Loading your plan" className="min-h-[400px]" />
     );
   }
 
@@ -684,10 +691,13 @@ export default function PersonalizedPlannerView({
               </div>
             </div>
 
-            <ul className="flex-1 space-y-3">
+            <ul className="flex-1">
               {ringParts.map((p) => (
-                <li key={p.level} className="flex items-center justify-between gap-4 h-10 px-3 rounded-lg bg-ink-800">
-                  <span className={`text-[13px] ${p.text}`}>{p.level}</span>
+                <li key={p.level} className="flex items-center justify-between gap-4 h-10 border-b border-white/[0.06] last:border-b-0">
+                  <span className="flex items-center gap-2 text-[13px] text-slate-300">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
+                    {p.level}
+                  </span>
                   <span className="font-mono text-[13px] tabular-nums text-white">
                     {p.done}<span className="text-slate-500"> / {p.total}</span>
                   </span>
@@ -703,9 +713,7 @@ export default function PersonalizedPlannerView({
             <div>
               <h2 className="text-[15px] font-medium text-white">Daily streak</h2>
               <div className="mt-3 flex items-center gap-3">
-                <span className="grid place-items-center w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400">
-                  <Flame className="w-5 h-5" strokeWidth={1.5} />
-                </span>
+                <span className="cell !w-4 !h-4 !rounded-[4px]" data-level={currentStreak > 0 ? 4 : 0} aria-hidden />
                 <div>
                   <div className="font-mono text-[24px] leading-none font-medium tabular-nums text-white">
                     {currentStreak}<span className="ml-2 font-sans text-[13px] font-normal text-slate-500">{currentStreak === 1 ? 'day' : 'days'}</span>
@@ -765,11 +773,11 @@ export default function PersonalizedPlannerView({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 animate-fadeIn">
+    <div ref={plannerTopRef} className="w-full max-w-7xl mx-auto space-y-6 animate-fadeIn scroll-mt-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-[24px] leading-[1.2] font-medium tracking-[-0.02em] text-white">NeetCode 150 in {daysCount} days</h1>
+          <h1 className="text-[24px] leading-[1.2] font-medium tracking-[-0.02em] text-white">DailyCode 150 in {daysCount} days</h1>
           <p className="mt-1 font-mono text-xs text-slate-500">
             {levelLabel} · {plan?.config?.dailyHours || 2} h a day · {Math.max(0, 150 - completedQuestionsCount)} left, about {hoursLeft} h · finish {fmtDate(plan?.estimatedCompletionDate) || '—'}
           </p>
@@ -986,6 +994,7 @@ export default function PersonalizedPlannerView({
         onClose={() => setIsWizardOpen(false)}
         onPlanGenerated={handlePlanGenerated}
         currentConfig={plan?.config}
+        solvedIds={allQuestions.filter((q) => q.completed).map((q) => q.id)}
       />
     </div>
   );

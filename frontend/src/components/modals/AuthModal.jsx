@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Eye, EyeOff, LogOut, Check, ArrowLeft } from 'lucide-react';
 import CodeStreakLogo from '../ui/CodeStreakLogo';
+import Spinner from '../ui/Spinner';
 import { api } from '../../services/api';
 
 const field =
@@ -392,7 +393,8 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess,
                 <p aria-live="polite" className={`mt-4 text-[13px] text-slate-400 ${showNotice ? '' : 'hidden'}`}>{notice}</p>
 
                 <button type="submit" disabled={loading || code.length !== 6}
-                  className="mt-6 btn-primary-glow w-full h-10 rounded-[10px] text-sm font-medium transition-colors disabled:opacity-60 active:scale-[0.98]">
+                  className="mt-6 btn-primary-glow w-full h-10 rounded-[10px] text-sm font-medium transition-colors disabled:opacity-60 active:scale-[0.98] inline-flex items-center justify-center gap-2">
+                  {loading && <Spinner size={16} label="Checking code" />}
                   {loading ? 'Checking' : 'Verify and sign in'}
                 </button>
               </form>
@@ -484,7 +486,8 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess,
                     <p role="alert" aria-live="polite" className={`text-[13px] text-rose-400 ${error ? '' : 'hidden'}`}>{error}</p>
 
                     <button type="submit" disabled={loading}
-                      className="btn-primary-glow w-full h-10 rounded-[10px] text-sm font-medium transition-colors disabled:opacity-60 active:scale-[0.98]">
+                      className="btn-primary-glow w-full h-10 rounded-[10px] text-sm font-medium transition-colors disabled:opacity-60 active:scale-[0.98] inline-flex items-center justify-center gap-2">
+                      {loading && <Spinner size={16} label={mode === 'signup' ? 'Creating account' : 'Signing in'} />}
                       {loading ? (mode === 'signup' ? 'Creating account' : 'Signing in') : mode === 'signup' ? 'Create account' : 'Sign in'}
                     </button>
                   </form>

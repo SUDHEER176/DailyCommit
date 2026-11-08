@@ -1,4 +1,4 @@
-// Client-side scheduler engine for NeetCode 150
+// Client-side scheduler engine for DailyCode 150
 export function generateScheduleClient({
   questions = [],
   level = 'intermediate',

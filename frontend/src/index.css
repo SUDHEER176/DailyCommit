@@ -343,3 +343,7 @@ html.light .btn-primary-glow .text-white {
 .badge-hard {
   @apply text-rose-600 dark:text-rose-400;
 }
+
+/* Horizontal scrollers (tab rails) without a visible scrollbar */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }

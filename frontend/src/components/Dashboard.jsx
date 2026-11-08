@@ -13,6 +13,7 @@ import IntegrationsSection from './ui/integrations-3';
 import Faqs01 from './ui/faqs-01';
 import FeatureBento from './reactbits/FeatureBento';
 import FinalCTA from './reactbits/FinalCTA';
+import RevisionTimeline from './RevisionTimeline';
 
 export default function Dashboard({ 
   stats, 
@@ -112,6 +113,8 @@ export default function Dashboard({
         <Stats15 stats={stats} setActiveTab={setActiveTab} />
       </div>
 
+      <RevisionTimeline />
+
       <FeatureBento stats={stats} setActiveTab={setActiveTab} onNavigate={onNavigate} signedIn={Boolean(currentUser?.isAuthenticated)} />
 
       <div id="features" className="scroll-mt-24">
@@ -143,7 +146,7 @@ export default function Dashboard({
               onClick={() => (onNavigate ? onNavigate('/practice/dsa') : (window.location.pathname = '/practice/dsa'))}
               className="inline-flex items-center gap-2 h-9 px-3 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
             >
-              NeetCode 150 planner
+              DailyCode 150 planner
               <ArrowRight className="w-4 h-4 text-slate-500" strokeWidth={1.5} />
             </button>
             <button

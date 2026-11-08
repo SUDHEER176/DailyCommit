@@ -10,7 +10,7 @@ const defaultBrands = [
  * Quiet, static logo row with the rating line above it. Logos are desaturated so they read as one set.
  */
 export default function SocialProof9({
-  title = 'Rated 4.9 out of 5 by 15,000 active learners. They have interviewed at',
+  title = 'Practice the patterns that come up in interviews at',
   brands,
   row1Brands,
   row2Brands,

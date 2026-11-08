@@ -88,6 +88,24 @@ async function authRequest(path, body) {
 }
 
 export const api = {
+  // Polls /health until the backend answers. Render's free tier sleeps and takes ~30-60s to wake.
+  // Resolves true when it's up, false if it gave up (the app then falls back to local data).
+  async waitForBackend({ maxWaitMs = 90000, onAttempt, signal } = {}) {
+    const deadline = Date.now() + maxWaitMs;
+    let attempt = 0;
+    while (Date.now() < deadline && !signal?.aborted) {
+      attempt += 1;
+      onAttempt?.(attempt);
+      try {
+        const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(8000) });
+        if (res.ok) return true;
+      } catch (e) {}
+      if (signal?.aborted) break;
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    return false;
+  },
+
   // Tasks
   async getTasks(date) {
     try {

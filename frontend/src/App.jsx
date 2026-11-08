@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { hideSplash, setSplashStatus, onSplashSkip } from './lib/splash';
 import Navbar, { navTabs } from './components/Navbar';
 import BottomNavBar from './components/ui/bottom-nav-bar';
 import Dashboard from './components/Dashboard';
@@ -83,8 +84,23 @@ export default function App() {
     }
   };
 
+  // Fade out the splash screen once the first data load settles
   useEffect(() => {
-    loadData();
+    if (!loading) hideSplash();
+  }, [loading]);
+
+  useEffect(() => {
+    // Keep the splash up until the backend is awake, then load real data.
+    // After a few seconds the splash explains the wait and offers "Continue offline".
+    const skip = new AbortController();
+    const offSkip = onSplashSkip(() => skip.abort());
+    const slowTimer = setTimeout(() => setSplashStatus('Waking up the server, this can take up to a minute', true), 4000);
+    api.waitForBackend({ signal: skip.signal }).finally(() => {
+      clearTimeout(slowTimer);
+      offSkip();
+      setSplashStatus('Loading your data');
+      loadData();
+    });
     // The API clears an expired session; drop back to guest mode and reload local data
     const onExpired = () => { setCurrentUser(null); loadData(); };
     window.addEventListener('auth:expired', onExpired);

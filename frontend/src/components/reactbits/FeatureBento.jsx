@@ -267,7 +267,7 @@ export default function FeatureBento({ stats = {}, setActiveTab, onNavigate, sig
             {[
               ["Striver's A2Z", 455],
               ['SDE Sheet', 180],
-              ['NeetCode', 150],
+              ['DailyCode', 150],
               ['Striver 75', 75],
               ['System Design', 48],
               ['OS & DBMS', 64],

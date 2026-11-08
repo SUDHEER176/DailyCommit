@@ -404,7 +404,7 @@ export default function PracticeHub({
               }`}
             >
               <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
-              <span>NeetCode 150 plan</span>
+              <span>DailyCode 150 plan</span>
             </button>
             <a
               href="https://discord.com"
@@ -595,11 +595,11 @@ export default function PracticeHub({
                 </button>
               </div>
             </div>
-            {/* NeetCode 150 Personalized Planner Featured Banner */}
+            {/* DailyCode 150 Personalized Planner Featured Banner */}
             <div className="rounded-2xl border border-white/[0.08] bg-ink-850 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div className="space-y-1">
                 <span className="text-[15px] font-medium text-white">
-                  A NeetCode 150 plan built around your interview date
+                  A DailyCode 150 plan built around your interview date
                 </span>
                 <p className="text-[13px] text-slate-400 max-w-xl">
                   Answer five short questions about your level, hours and target date, and get a day-by-day schedule with revision built in.
