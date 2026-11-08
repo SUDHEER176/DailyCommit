@@ -531,6 +531,23 @@ export const api = {
     return getLocal('study_plan', null);
   },
 
+  // Compile and run C++ or Java through the backend (Judge0). Returns { success, data | error }
+  async executeCode({ language, source }) {
+    try {
+      const res = await apiFetch(`${API_BASE}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language, source }),
+        signal: AbortSignal.timeout(45000),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) return { success: true, data: json.data };
+      return { success: false, error: json.error || `The code runner returned ${res.status}` };
+    } catch (e) {
+      return { success: false, error: 'Can’t reach the code runner. Check that the backend is running' };
+    }
+  },
+
   async generateStudyPlan(config) {
     try {
       const res = await apiFetch(`${API_BASE}/planner/generate`, {

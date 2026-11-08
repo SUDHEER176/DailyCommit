@@ -25,7 +25,9 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { getProblemDetails } from '../../data/problemDetails';
-import { runCodeAgainstCases } from '../../services/codeExecutionService';
+import { runSolution, warmUpPython } from '../../services/execution';
+import { decodeEntities } from '../../services/execution/testCases';
+import { clearlyOtherLanguage } from '../../services/execution/languageCheck';
 import { api } from '../../services/api';
 
 const SUPPORTED_LANGUAGES = [
@@ -129,6 +131,12 @@ export default function CodeWorkspace({
   const [copied, setCopied] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fontSize, setFontSize] = useState(14);
+  const [runStatus, setRunStatus] = useState(null); // e.g. "Loading Python" while the interpreter downloads
+
+  // Python loads about 10 MB the first time, so start as soon as it's picked
+  useEffect(() => {
+    if (language === 'python') warmUpPython()?.catch(() => {});
+  }, [language]);
 
   // Load problem details and fetch official LeetCode statements & snippets
   useEffect(() => {
@@ -175,36 +183,48 @@ export default function CodeWorkspace({
     };
   }, [initialProblem]);
 
+  // The draft key of the code currently in the editor. Saving goes here, not to whatever
+  // language is selected at that instant, so a change event that lands during a language
+  // switch can't store one language's code under another's key.
+  const draftKeyRef = useRef(null);
+
   // Load starter code or saved draft from localStorage
   useEffect(() => {
     if (!problem) return;
     const storageKey = `code_${problem.id}_${language}`;
-    const saved = localStorage.getItem(storageKey);
+    let saved = null;
+    try { saved = localStorage.getItem(storageKey); } catch { saved = null; }
 
-    // If saved draft was an old placeholder, upgrade to real official template
+    // Old placeholders, and drafts that are clearly another language, give way to the real template
     const isGenericFallback = saved && (
-      saved.includes('// Write your code here') || 
+      saved.includes('// Write your code here') ||
       saved.includes('// Write your solution here') ||
       saved.includes('function happyNumber(') ||
       saved.trim() === ''
     );
+    const isOtherLanguage = saved && Boolean(clearlyOtherLanguage(language, saved));
+    if (isOtherLanguage) {
+      try { localStorage.removeItem(storageKey); } catch { /* storage unavailable */ }
+    }
 
-    if (saved && !isGenericFallback) {
+    if (saved && !isGenericFallback && !isOtherLanguage) {
       setCode(saved);
     } else if (problem.starterTemplates && problem.starterTemplates[language]) {
       setCode(problem.starterTemplates[language]);
     } else {
-      setCode('// Write your solution here\n');
+      setCode(language === 'python' ? '# Write your solution here\n' : '// Write your solution here\n');
     }
+    draftKeyRef.current = storageKey;
     setExecutionResult(null);
   }, [problem?.id, problem?.starterTemplates?.[language], language]);
 
-  // Save code changes to localStorage
+  // Save code changes to localStorage, under the key the editor's code was loaded for
   const handleCodeChange = (newVal) => {
     const val = newVal ?? '';
     setCode(val);
-    if (problem) {
-      localStorage.setItem(`code_${problem.id}_${language}`, val);
+    const key = draftKeyRef.current;
+    if (key && key === `code_${problem?.id}_${language}`) {
+      try { localStorage.setItem(key, val); } catch { /* storage unavailable */ }
     }
   };
 
@@ -227,7 +247,7 @@ export default function CodeWorkspace({
 
     try {
       const testCases = problem.sampleTestCases || [];
-      const res = await runCodeAgainstCases(language, code, testCases);
+      const res = await runSolution({ problem, language, code, testCases, onStatus: setRunStatus });
       setExecutionResult({
         type: 'run',
         ...res
@@ -246,6 +266,7 @@ export default function CodeWorkspace({
       });
     } finally {
       setIsRunning(false);
+      setRunStatus(null);
     }
   };
 
@@ -260,7 +281,7 @@ export default function CodeWorkspace({
         ...(problem.sampleTestCases || []),
         ...(problem.hiddenTestCases || [])
       ];
-      const res = await runCodeAgainstCases(language, code, allCases);
+      const res = await runSolution({ problem, language, code, testCases: allCases, onStatus: setRunStatus });
 
       setExecutionResult({
         type: 'submit',
@@ -295,6 +316,7 @@ export default function CodeWorkspace({
       });
     } finally {
       setIsSubmitting(false);
+      setRunStatus(null);
     }
   };
 
@@ -544,14 +566,14 @@ export default function CodeWorkspace({
                         className="inline-flex items-center gap-2 h-8 px-3 rounded-lg bg-ink-800 border border-white/[0.08] hover:border-white/[0.14] text-[13px] text-white transition-colors active:scale-[0.98] disabled:opacity-50"
                       >
                         <Play className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
-                        {isRunning ? 'Running' : 'Run'}
+                        {isRunning ? (runStatus || 'Running') : 'Run'}
                       </button>
                       <button
                         onClick={handleSubmitCode}
                         disabled={isRunning || isSubmitting}
                         className="btn-primary-glow inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium active:scale-[0.98] disabled:opacity-50"
                       >
-                        {isSubmitting ? 'Submitting' : 'Submit'}
+                        {isSubmitting ? (runStatus || 'Submitting') : 'Submit'}
                       </button>
                     </div>
                   </div>
@@ -579,11 +601,11 @@ export default function CodeWorkspace({
                           <div className="mt-4 grid gap-4 sm:grid-cols-2">
                             <div>
                               <p className="text-xs text-slate-500">Input</p>
-                              <pre className="mt-2 p-3 rounded-[10px] bg-ink-850 border border-white/[0.06] font-mono text-[13px] text-slate-200 whitespace-pre-wrap">{activeCase.input}</pre>
+                              <pre className="mt-2 p-3 rounded-[10px] bg-ink-850 border border-white/[0.06] font-mono text-[13px] text-slate-200 whitespace-pre-wrap">{decodeEntities(activeCase.input)}</pre>
                             </div>
                             <div>
                               <p className="text-xs text-slate-500">Expected</p>
-                              <pre className="mt-2 p-3 rounded-[10px] bg-ink-850 border border-white/[0.06] font-mono text-[13px] text-slate-200 whitespace-pre-wrap">{activeCase.expected}</pre>
+                              <pre className="mt-2 p-3 rounded-[10px] bg-ink-850 border border-white/[0.06] font-mono text-[13px] text-slate-200 whitespace-pre-wrap">{decodeEntities(activeCase.expected)}</pre>
                             </div>
                           </div>
                         ) : (
@@ -606,7 +628,7 @@ export default function CodeWorkspace({
                                 {executionResult.verdict}
                               </div>
                               <div className="mt-2 text-xs text-slate-500">
-                                {executionResult.type === 'submit' ? 'All test cases' : 'Sample cases'} ·{' '}
+                                {executionResult.type === 'submit' ? 'Submitted' : 'Sample cases'} ·{' '}
                                 <span className="font-mono tabular-nums">{passedCount} / {results.length} passed</span>
                               </div>
                             </div>

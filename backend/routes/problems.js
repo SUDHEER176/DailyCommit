@@ -29,6 +29,21 @@ function saveCache(cache) {
 
 const router = express.Router();
 
+// Bump when the shape of a cached problem changes, so old entries are fetched again
+const CACHE_VERSION = 3;
+
+const decodeEntities = (t = '') => String(t)
+  .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+  .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+  .replace(/&amp;/g, '&');
+
+/** Expected outputs of the statement's examples, in order. Handles the old <pre> and the newer <p><code> layouts. */
+function exampleOutputs(html = '') {
+  const text = decodeEntities(html.replace(/<[^>]+>/g, ''));
+  return [...text.matchAll(/(?:^|\n)\s*Output:?[ \t]*\n?[ \t]*([^\n]+)/g)].map((m) => m[1].trim());
+}
+
 // GET /api/problems/details/:slug (Fetches full official LeetCode statement, snippets, testcases)
 router.get('/details/:slug', async (req, res) => {
   let rawSlug = req.params.slug.trim().toLowerCase();
@@ -40,7 +55,7 @@ router.get('/details/:slug', async (req, res) => {
   }
 
   const cache = getCache();
-  if (cache[rawSlug]) {
+  if (cache[rawSlug]?.cacheVersion === CACHE_VERSION) {
     return res.json({ success: true, data: cache[rawSlug] });
   }
 
@@ -61,6 +76,8 @@ router.get('/details/:slug', async (req, res) => {
             difficulty
             content
             sampleTestCase
+            exampleTestcaseList
+            metaData
             codeSnippets {
               langSlug
               code
@@ -82,7 +99,9 @@ router.get('/details/:slug', async (req, res) => {
     if (q.codeSnippets) {
       for (const s of q.codeSnippets) {
         if (s.langSlug === 'javascript') templates.javascript = s.code;
-        if (s.langSlug === 'python3' || s.langSlug === 'python') templates.python = s.code;
+        // Prefer Python 3 ("python3"); LeetCode's "python" is the Python 2 template
+        if (s.langSlug === 'python3') templates.python = s.code;
+        if (s.langSlug === 'python' && !templates.python) templates.python = s.code;
         if (s.langSlug === 'cpp') templates.cpp = s.code;
         if (s.langSlug === 'java') templates.java = s.code;
       }
@@ -118,39 +137,19 @@ router.get('/details/:slug', async (req, res) => {
       }
     }
 
-    // Sample test cases
-    const sampleTestCases = [];
-    let jsFnName = '';
-    if (templates.javascript) {
-      const fnMatch = templates.javascript.match(/(?:var|const|let)\s+([a-zA-Z0-9_$]+)\s*=\s*function/) ||
-                      templates.javascript.match(/function\s+([a-zA-Z0-9_$]+)\s*\(/);
-      if (fnMatch) jsFnName = fnMatch[1];
-    }
-    let pyFnName = '';
-    if (templates.python) {
-      const pyMatch = templates.python.match(/def\s+([a-zA-Z0-9_$]+)\s*\(self/);
-      if (pyMatch) pyFnName = pyMatch[1];
-    }
-
-    if (examples.length > 0) {
-      examples.forEach((ex, i) => {
-        let cleanArgs = (ex.input || '').replace(/(?:^|\n|,)\s*[a-zA-Z0-9_$]+\s*=\s*/g, (m) => m.startsWith(',') ? ', ' : '').trim();
-        let pyArgs = cleanArgs.replace(/\btrue\b/g, 'True').replace(/\bfalse\b/g, 'False').replace(/\bnull\b/g, 'None');
-        sampleTestCases.push({
-          id: i + 1,
-          input: ex.input,
-          expected: ex.output,
-          fnCallJs: jsFnName ? `${jsFnName}(${cleanArgs})` : undefined,
-          fnCallPy: pyFnName ? `Solution().${pyFnName}(${pyArgs})` : undefined
-        });
-      });
-    } else if (q.sampleTestCase) {
-      sampleTestCases.push({
-        id: 1,
-        input: q.sampleTestCase,
-        expected: "Expected output"
-      });
-    }
+    // Sample test cases: inputs from exampleTestcaseList (one value per line, in parameter order),
+    // expected outputs from the statement. metaData carries the parameter and return types.
+    let meta = null;
+    try { meta = q.metaData ? JSON.parse(q.metaData) : null; } catch { meta = null; }
+    const outputs = exampleOutputs(q.content);
+    const paramNames = meta?.params?.map((p) => p.name) || [];
+    const sampleTestCases = (q.exampleTestcaseList || []).map((raw, i) => {
+      const args = raw.split('\n');
+      const input = meta?.classname || !paramNames.length
+        ? args.join('\n')
+        : args.map((v, j) => `${paramNames[j] || `arg${j + 1}`} = ${v}`).join('\n');
+      return { id: i + 1, input, args, expected: outputs[i] ?? '' };
+    });
 
     const problemData = {
       id: `nc-${q.questionFrontendId || rawSlug}`,
@@ -162,7 +161,9 @@ router.get('/details/:slug', async (req, res) => {
       examples,
       constraints,
       sampleTestCases,
-      hiddenTestCases: []
+      hiddenTestCases: [],
+      meta,
+      cacheVersion: CACHE_VERSION
     };
 
     cache[rawSlug] = problemData;

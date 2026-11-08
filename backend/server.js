@@ -8,12 +8,15 @@ import statsRouter from './routes/stats.js';
 import authRouter from './routes/auth.js';
 import plannerRouter from './routes/planner.js';
 import billingRouter, { webhookHandler, billingStatus } from './routes/billing.js';
+import executeRouter, { executeStatus } from './routes/execute.js';
 import { initDb, flushDb, storageMode } from './data/store.js';
 import { pool, ping } from './data/neon.js';
 import { requireUser, googleClientId } from './data/auth.js';
 import { mailConfigured, verifyMailer } from './data/mailer.js';
 
 const app = express();
+// Render and similar hosts sit behind one proxy; this makes req.ip the visitor's address (used by rate limits)
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
@@ -33,6 +36,8 @@ app.use('/api/roadmap', requireUser, roadmapRouter);
 app.use('/api/stats', requireUser, statsRouter);
 app.use('/api/planner', requireUser, plannerRouter);
 app.use('/api/billing', billingRouter);
+// C++ and Java runs for the code editor; public like the statement lookups, rate limited per IP
+app.use('/api/execute', executeRouter);
 
 // Health check, including the database connection
 app.get('/api/health', async (req, res) => {
@@ -67,6 +72,10 @@ async function start() {
     } else {
       console.log('[storage] DATABASE_URL not set, using data/db.json. Accounts are off');
     }
+    const runner = executeStatus();
+    console.log(runner.configured
+      ? `[execute] C++ and Java run on Judge0 (${runner.url})`
+      : '[execute] C++ and Java off, set JUDGE0_API_KEY (or JUDGE0_URL for a self-hosted Judge0)');
   } catch (err) {
     console.error('[neon] could not connect:', err.message);
     console.error('Check DATABASE_URL in backend/.env, then start the server again.');
