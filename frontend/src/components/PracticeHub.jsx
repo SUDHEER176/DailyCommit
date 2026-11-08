@@ -14,6 +14,13 @@ import { BRAND } from '@/lib/brand';
 import { CppLogo, PythonLogo } from './ui/BrandLogos';
 import PersonalizedPlannerView from './PersonalizedPlanner/PersonalizedPlannerView';
 import CodeWorkspace from './CodeWorkspace/CodeWorkspace';
+import DailyProblemCard from './practice/DailyProblemCard';
+import RevisionQueueCard from './practice/RevisionQueueCard';
+import { api } from '../services/api';
+import {
+  dailyProblem, readDailyLog, markDailySolved, activeDays, currentStreak, localDay,
+  revisionSchedule, editorProblem, PROBLEM_COUNT, TOPIC_COUNT,
+} from '@/lib/practice';
 
 export default function PracticeHub({
   onNavigate,
@@ -37,207 +44,201 @@ export default function PracticeHub({
     }
   };
 
-  // Domain tab filter: DSA, Core CS, System Design, Data Engineering
+  // Domain tab filter: DSA, Core CS, System Design
   const [activeCategory, setActiveCategory] = useState('DSA');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSheet, setSelectedSheet] = useState(null); // When user clicks 'Explore ->'
-  const [completedTopicIds, setCompletedTopicIds] = useState(() => {
-    try {
-      const saved = localStorage.getItem('practice_hub_completed_topics');
-      return saved ? JSON.parse(saved) : ['step-1-1', 'step-1-2', 'step-3-1'];
-    } catch {
-      return ['step-1-1', 'step-1-2', 'step-3-1'];
-    }
-  });
+  const [selectedSheet, setSelectedSheet] = useState(null); // sheet whose outline is open
 
-  const toggleTopicCheck = (id) => {
-    setCompletedTopicIds(prev => {
-      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      try {
-        localStorage.setItem('practice_hub_completed_topics', JSON.stringify(next));
-      } catch (e) {
-        console.warn(e);
-      }
-      return next;
-    });
+  // ── The person's plan: source of the revision queue and the streak ──
+  const [plan, setPlan] = useState(null);
+  const [dailyLog, setDailyLog] = useState(() => readDailyLog());
+  // Why the editor is open, so an accepted submit can be recorded: { kind: 'daily' | 'review', id }
+  const [editorContext, setEditorContext] = useState(null);
+
+  const loadPlan = () => api.getStudyPlan().then((p) => setPlan(p?.days ? p : null)).catch(() => setPlan(null));
+  // Reload when coming back to the hub, since the planner and editor change the plan
+  useEffect(() => {
+    if (activeView === 'sheets' && !activeEditorProblem) loadPlan();
+  }, [activeView, activeEditorProblem]);
+
+  const today = dailyProblem();
+  const planQuestion = (id) => plan?.days?.flatMap((d) => d.questions).find((q) => q.id === id);
+  const todayKey = localDay();
+  const solvedToday = dailyLog[todayKey] === today.id
+    || Boolean(planQuestion(today.id)?.completedAt && localDay(new Date(planQuestion(today.id).completedAt)) === todayKey);
+  const streak = currentStreak(activeDays(plan, dailyLog));
+  const schedule = revisionSchedule(plan);
+
+  const openEditor = (problem, context) => {
+    setEditorContext(context);
+    setActiveEditorProblem(editorProblem(problem));
   };
 
-  // Sheet Catalog Data modeled after takeUforward
+  // An accepted submit in the editor: count the daily problem, or record the review
+  const handleProblemSolved = async () => {
+    const ctx = editorContext;
+    if (!ctx) return;
+    if (ctx.kind === 'daily') {
+      setDailyLog(markDailySolved(ctx.id));
+      const q = planQuestion(ctx.id);
+      if (q && !q.completed) await api.updatePlannedQuestion(ctx.id, { completed: true });
+    } else if (ctx.kind === 'review') {
+      await api.updatePlannedQuestion(ctx.id, { reviewed: true });
+      setEditorContext(null); // one review per accepted submit
+    }
+    loadPlan();
+  };
+
+  const markReviewed = async (item) => {
+    const updated = await api.updatePlannedQuestion(item.question.id, { reviewed: true });
+    if (updated?.days) setPlan(updated);
+    else loadPlan();
+  };
+
+  // Sheets. Only DailyCode 150 has problems behind it today; the others are outlines being written.
   const sheets = [
     {
-      id: 'cpp-beginners',
-      section: 'Start Coding',
-      title: 'C++ for Beginners',
-      description: 'Master fast I/O, STL containers, pointers, and memory mechanics for DSA.',
-      tag: 'Free certification',
-      icon: 'C++',
-      iconColor: 'from-brand-600 to-slate-600',
-      modules: '9 Modules',
-      topics: '29 Topics',
-      hours: '1.1 Hrs',
+      id: 'dailycode-150',
+      section: 'Start here',
+      title: 'DailyCode 150',
+      description: 'The core interview patterns, ordered topic by topic, with a day-by-day plan, the editor and revision built in.',
+      tag: `${PROBLEM_COUNT} problems · ${TOPIC_COUNT} topics`,
+      icon: '150',
       category: 'DSA',
-      popular: false,
+      live: true,
+      syllabus: [],
+    },
+    {
+      id: 'cpp-beginners',
+      section: 'Language basics',
+      title: 'C++ for DSA',
+      description: 'Fast I/O, the STL containers you reach for in interviews, references and pointers.',
+      icon: 'C++',
+      category: 'DSA',
       syllabus: [
-        { id: 'cpp-1', title: 'Basics of C++: Variables, Types, Input/Output', count: '4 Topics' },
-        { id: 'cpp-2', title: 'Conditionals & Loop Constructs', count: '5 Topics' },
-        { id: 'cpp-3', title: 'Functions, Pass by Reference & Pointers', count: '6 Topics' },
-        { id: 'cpp-4', title: 'Standard Template Library (Vectors, Sets, Maps)', count: '8 Topics' },
-        { id: 'cpp-5', title: 'Time Complexity Analysis for C++ Code', count: '6 Topics' }
-      ]
+        'Variables, types, input and output',
+        'Conditionals and loops',
+        'Functions, references and pointers',
+        'The STL: vector, set, map, priority_queue',
+        'Reading the time complexity of C++ code',
+      ],
     },
     {
       id: 'python-dsa',
-      section: 'Start Coding',
-      title: 'Python for DSA Mastery',
-      description: 'Clean syntax, list comprehensions, heaps, and recursion tricks in Python.',
-      tag: 'Interview Ready',
+      section: 'Language basics',
+      title: 'Python for DSA',
+      description: 'Lists, dicts, deque, heapq and collections, plus recursion and memoization with functools.',
       icon: 'Py',
-      iconColor: 'from-amber-500 to-emerald-500',
-      modules: '8 Modules',
-      topics: '34 Topics',
-      hours: '2.4 Hrs',
       category: 'DSA',
-      popular: false,
       syllabus: [
-        { id: 'py-1', title: 'Python Syntax & Dynamic Typing', count: '5 Topics' },
-        { id: 'py-2', title: 'Built-in Data Structures: Lists, Dicts, Tuples, Deque', count: '8 Topics' },
-        { id: 'py-3', title: 'Heapq & Collections Module in Depth', count: '6 Topics' },
-        { id: 'py-4', title: 'Recursion Depth & Memoization with functools', count: '7 Topics' }
-      ]
+        'Syntax and dynamic typing',
+        'Lists, dicts, tuples and deque',
+        'heapq and the collections module',
+        'Recursion limits and memoization with functools',
+      ],
     },
     {
-      id: 'striver-a2z',
-      section: 'Learn From Zero',
-      title: "Striver's A2Z DSA Sheet",
-      description: 'The complete #1 master syllabus taking you from elementary programming to dynamic programming mastery.',
-      tag: 'Most Popular',
+      id: 'a2z-roadmap',
+      section: 'More sheets',
+      title: 'A2Z Roadmap',
+      description: 'A longer path from the basics to dynamic programming, for when you are starting from zero.',
       icon: 'A2Z',
-      iconColor: 'from-rose-500 via-slate-600 to-brand-600',
-      modules: '20 Modules',
-      topics: '455 Topics',
-      contests: '16 Contests',
-      hours: '131.4 Hrs',
       category: 'DSA',
-      popular: true,
       syllabus: [
-        { id: 'a2z-1', title: 'Step 1: Learn the Basics (Math, Recursion, Time Complexity)', count: '24 Problems' },
-        { id: 'a2z-2', title: 'Step 2: Learn Important Sorting Techniques (Merge, Quick, Cyclic)', count: '7 Problems' },
-        { id: 'a2z-3', title: 'Step 3: Solve Problems on Arrays (Easy, Medium, Hard)', count: '40 Problems' },
-        { id: 'a2z-4', title: 'Step 4: Binary Search on 1D, 2D Arrays & Search Space', count: '32 Problems' },
-        { id: 'a2z-5', title: 'Step 5: Strings (Basic to Advanced KMP/Z-Algorithm)', count: '18 Problems' },
-        { id: 'a2z-6', title: 'Step 6: Learn LinkedList (Single, Doubly, Fast/Slow Pointers)', count: '31 Problems' },
-        { id: 'a2z-7', title: 'Step 7: Recursion & Backtracking Patterns', count: '22 Problems' },
-        { id: 'a2z-8', title: 'Step 8: Bit Manipulation & Bitmasks', count: '14 Problems' },
-        { id: 'a2z-9', title: 'Step 9: Stacks and Queues (Monotonic Stack & LRU)', count: '30 Problems' },
-        { id: 'a2z-10', title: 'Step 10: Sliding Window & Two Pointers', count: '16 Problems' },
-        { id: 'a2z-11', title: 'Step 11: Heaps & Priority Queues', count: '18 Problems' },
-        { id: 'a2z-12', title: 'Step 12: Greedy Algorithms', count: '15 Problems' },
-        { id: 'a2z-13', title: 'Step 13: Binary Trees (Traversals, Views, Construction)', count: '38 Problems' },
-        { id: 'a2z-14', title: 'Step 14: Binary Search Trees (BST)', count: '16 Problems' },
-        { id: 'a2z-15', title: 'Step 15: Graphs (BFS/DFS, Cycles, TopoSort, Dijkstra, Disjoint Set)', count: '54 Problems' },
-        { id: 'a2z-16', title: 'Step 16: Dynamic Programming (1D, 2D, Grids, Subsequences, Trees)', count: '56 Problems' },
-        { id: 'a2z-17', title: 'Step 17: Tries (Insert, Search, Prefix & XOR)', count: '7 Problems' },
-        { id: 'a2z-18', title: 'Step 18: Advanced Strings & Rabin-Karp', count: '8 Problems' }
-      ]
+        'Basics: math, recursion, time complexity',
+        'Sorting: merge, quick, cyclic',
+        'Arrays: easy to hard',
+        'Binary search on arrays and on the answer',
+        'Strings',
+        'Linked lists',
+        'Recursion and backtracking',
+        'Bit manipulation',
+        'Stacks, queues and monotonic stacks',
+        'Sliding window and two pointers',
+        'Heaps',
+        'Greedy',
+        'Binary trees',
+        'Binary search trees',
+        'Graphs',
+        'Dynamic programming',
+        'Tries',
+        'Advanced strings',
+      ],
     },
     {
-      id: 'striver-sde-180',
-      section: 'Interview Prep – India & Global Tier-1',
-      title: "Striver's SDE Sheet (Top 180)",
-      description: 'The gold standard high-yield curated question set asked at Google, Amazon, Microsoft, and Uber.',
-      tag: 'FAANG Benchmark',
+      id: 'top-180',
+      section: 'More sheets',
+      title: 'Top 180',
+      description: 'A day-by-day set of frequently asked interview problems, a few each day.',
       icon: '180',
-      iconColor: 'from-amber-500 to-amber-600',
-      modules: '26 Modules',
-      topics: '180 Core Drills',
-      hours: '54.0 Hrs',
       category: 'DSA',
-      popular: true,
       syllabus: [
-        { id: 'sde-1', title: 'Day 1: Arrays (Set Matrix Zeroes, Pascal, Next Permutation)', count: '6 Problems' },
-        { id: 'sde-2', title: 'Day 2: Arrays Part-II (Rotate Matrix, Merge Intervals, Find Duplicate)', count: '6 Problems' },
-        { id: 'sde-3', title: 'Day 3: Arrays/Math (Search 2D, Pow(x,n), Majority Element)', count: '6 Problems' },
-        { id: 'sde-4', title: 'Day 4: Arrays Part-IV (2 Sum, 4 Sum, Longest Consecutive Sequence)', count: '6 Problems' },
-        { id: 'sde-5', title: 'Day 5: LinkedList (Reverse, Middle, Merge Two Sorted, Delete Kth)', count: '6 Problems' },
-        { id: 'sde-6', title: 'Day 6: LinkedList Part-II (Intersection, Cycle Detection, Flatten)', count: '6 Problems' },
-        { id: 'sde-7', title: 'Day 7: Two Pointers (3Sum, Trapping Rainwater, Max Consecutive Ones)', count: '6 Problems' },
-        { id: 'sde-8', title: 'Day 8: Greedy Algorithm (N Meetings, Minimum Platforms, Job Sequencing)', count: '6 Problems' },
-        { id: 'sde-9', title: 'Day 9: Recursion & Backtracking (Subsets, Combination Sum, Palindrome Partition)', count: '6 Problems' },
-        { id: 'sde-10', title: 'Day 10: Backtracking (N-Queens, Sudoku Solver, M Coloring)', count: '6 Problems' }
-      ]
+        'Arrays',
+        'Arrays, part 2',
+        'Arrays and math',
+        'Arrays, part 4',
+        'Linked lists',
+        'Linked lists, part 2',
+        'Two pointers',
+        'Greedy',
+        'Recursion',
+        'Backtracking',
+      ],
     },
     {
-      id: 'striver-75',
-      section: 'Interview Prep – India & Global Tier-1',
-      title: "Striver's 75 Challenge",
-      description: 'Crisp, high-impact 75 patterns for fast-track 30-day interview cramming.',
-      tag: '30-Day Sprint',
+      id: 'quick-75',
+      section: 'More sheets',
+      title: 'Quick 75',
+      description: 'A shorter list for when the interview is a few weeks away.',
       icon: '75',
-      iconColor: 'from-brand-500 to-brand-600',
-      modules: '14 Modules',
-      topics: '75 Problems',
-      hours: '28.5 Hrs',
       category: 'DSA',
-      popular: false,
       syllabus: [
-        { id: 'st75-1', title: 'Arrays & Hashing Essentials', count: '10 Problems' },
-        { id: 'st75-2', title: 'Two Pointers & Sliding Window', count: '8 Problems' },
-        { id: 'st75-3', title: 'Stack & Monotonic Deque', count: '7 Problems' },
-        { id: 'st75-4', title: 'Binary Search Patterns', count: '8 Problems' },
-        { id: 'st75-5', title: 'Linked Lists & Two Pointer Traversal', count: '6 Problems' },
-        { id: 'st75-6', title: 'Trees & BST Essentials', count: '12 Problems' },
-        { id: 'st75-7', title: 'Graphs BFS/DFS & Shortest Path', count: '12 Problems' },
-        { id: 'st75-8', title: 'Dynamic Programming Top Patterns', count: '12 Problems' }
-      ]
+        'Arrays and hashing',
+        'Two pointers and sliding window',
+        'Stacks and monotonic deques',
+        'Binary search',
+        'Linked lists',
+        'Trees and BSTs',
+        'Graphs and shortest paths',
+        'Dynamic programming',
+      ],
     },
     {
-      id: 'system-design-primer',
-      section: 'System Design Architecture',
-      title: 'High-Level Design (HLD) Master',
-      description: 'Distributed caches, load balancing, sharding, message queues, and rate limiters.',
-      tag: 'Mid-Senior Level',
+      id: 'system-design',
+      section: 'System design',
+      title: 'System design basics',
+      description: 'Caches, load balancing, sharding and queues, then two classic design walk-throughs.',
       icon: 'HLD',
-      iconColor: 'from-emerald-500 to-brand-600',
-      modules: '12 Modules',
-      topics: '48 Architecture Case Studies',
-      hours: '32.0 Hrs',
       category: 'System Design',
-      popular: false,
       syllabus: [
-        { id: 'hld-1', title: 'Load Balancers, Consistent Hashing & DNS', count: '6 Topics' },
-        { id: 'hld-2', title: 'Caching Strategies (Redis, Memcached, Eviction Policies)', count: '8 Topics' },
-        { id: 'hld-3', title: 'Database Sharding, Replication & CAP Theorem', count: '10 Topics' },
-        { id: 'hld-4', title: 'Message Queues (Kafka, RabbitMQ, Decoupled Systems)', count: '8 Topics' },
-        { id: 'hld-5', title: 'Design URL Shortener (TinyURL)', count: 'Case Study' },
-        { id: 'hld-6', title: 'Design WhatsApp / Real-Time Chat Architecture', count: 'Case Study' }
-      ]
+        'Load balancers, consistent hashing and DNS',
+        'Caching and eviction policies',
+        'Sharding, replication and the CAP theorem',
+        'Message queues',
+        'Design a URL shortener',
+        'Design a chat app',
+      ],
     },
     {
-      id: 'core-cs-fundamentals',
-      section: 'Core CS Fundamentals',
-      title: 'Operating Systems & DBMS for Interviews',
-      description: 'Processes, threads, locks, virtual memory, ACID properties, and B+ Trees.',
-      tag: 'University & Campus',
+      id: 'core-cs',
+      section: 'Core CS',
+      title: 'Operating systems and DBMS',
+      description: 'Processes, threads, scheduling, memory, normalization and transactions.',
       icon: 'OS',
-      iconColor: 'from-slate-500 to-slate-600',
-      modules: '10 Modules',
-      topics: '64 Theory Quizzes',
-      hours: '18.0 Hrs',
       category: 'Core CS',
-      popular: false,
       syllabus: [
-        { id: 'os-1', title: 'Processes, Threads & Concurrency (Mutex vs Semaphores)', count: '12 Topics' },
-        { id: 'os-2', title: 'CPU Scheduling Algorithms & Deadlocks', count: '10 Topics' },
-        { id: 'os-3', title: 'Memory Management & Paging / Virtual Memory', count: '12 Topics' },
-        { id: 'db-1', title: 'DBMS: Relational Model, Keys & Normalization (1NF to BCNF)', count: '14 Topics' },
-        { id: 'db-2', title: 'Transactions, ACID Properties & Concurrency Control', count: '16 Topics' }
-      ]
+        'Processes, threads and concurrency',
+        'CPU scheduling and deadlocks',
+        'Memory management and virtual memory',
+        'The relational model, keys and normalization',
+        'Transactions, ACID and concurrency control',
+      ],
     }
   ];
 
   // Filter sheets by active category
   const filteredSheets = sheets.filter(s => {
-    const matchesCategory = activeCategory === 'DSA' ? (s.category === 'DSA' || s.section === 'Learn From Zero' || s.section === 'Start Coding') : s.category === activeCategory;
+    const matchesCategory = s.category === activeCategory;
     const matchesSearch = searchQuery === '' || s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
@@ -285,7 +286,7 @@ export default function PracticeHub({
         className={`md:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity duration-150 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       />
 
-      {/* ── LEFT SIDEBAR (takeUforward Style) ── */}
+      {/* ── LEFT SIDEBAR ── */}
       <aside
         onClickCapture={(e) => { if (e.target.closest('button, a')) setIsSidebarOpen(false); }}
         className={`fixed inset-y-0 left-0 z-50 w-72 transition-transform duration-150 ease-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:sticky md:top-0 md:self-start md:h-screen md:w-64 overflow-y-auto bg-ink-950 border-r border-white/[0.08] flex flex-col justify-between p-3 flex-shrink-0 select-none`}
@@ -406,15 +407,6 @@ export default function PracticeHub({
               <CheckSquare className="w-4 h-4" strokeWidth={1.5} />
               <span>DailyCode 150 plan</span>
             </button>
-            <a
-              href="https://discord.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center gap-2.5 h-8 px-2.5 rounded-lg text-[13px] transition-colors text-left text-slate-400 hover:text-white hover:bg-white/[0.04]"
-            >
-              <MessageCircle className="w-4 h-4" strokeWidth={1.5} />
-              <span>Community</span>
-            </a>
           </div>
         </div>
 
@@ -439,7 +431,7 @@ export default function PracticeHub({
                 </div>
                 <div className="overflow-hidden">
                   <span className="text-xs font-medium text-white block truncate group-hover:text-slate-200">
-                    {currentUser.name || 'Alex Learner'}
+                    {currentUser.name || 'Signed in'}
                   </span>
                   <span className="text-[11px] text-slate-400 font-mono block truncate">
                     {currentUser.email || 'Signed in'}
@@ -485,7 +477,7 @@ export default function PracticeHub({
             </span>
             <span>/</span>
             <span 
-              onClick={() => { setActiveEditorProblem(null); setActiveView('sheets'); }}
+              onClick={() => { setActiveEditorProblem(null); setEditorContext(null); setActiveView('sheets'); }}
               className="hover:text-white cursor-pointer transition-colors"
             >
               Practice hub
@@ -513,8 +505,8 @@ export default function PracticeHub({
           {/* Right Header Actions: Streak & Profile Pill */}
           <div className="flex items-center gap-2.5">
             <div className="hidden sm:flex items-center gap-2 h-8 px-2 text-[13px] text-slate-500">
-              <span className="cell" data-level="4" aria-hidden />
-              <span className="font-mono tabular-nums text-white">{currentUser?.streak || 7}</span>
+              <span className="cell" data-level={streak > 0 ? 4 : 0} aria-hidden />
+              <span className="font-mono tabular-nums text-white">{streak}</span>
               <span>day streak</span>
             </div>
 
@@ -539,10 +531,8 @@ export default function PracticeHub({
           <div className="rounded-2xl overflow-hidden border border-white/[0.08] shadow-sm bg-ink-850">
             <CodeWorkspace
               problem={activeEditorProblem}
-              onBack={() => setActiveEditorProblem(null)}
-              onProblemSolved={(probId) => {
-                if (probId) toggleTopicCheck(probId);
-              }}
+              onBack={() => { setActiveEditorProblem(null); setEditorContext(null); }}
+              onProblemSolved={handleProblemSolved}
             />
           </div>
         ) : activeView === 'planner' ? (
@@ -558,43 +548,14 @@ export default function PracticeHub({
           </div>
         ) : (
           <>
-            {/* Daily LeetCode Challenge Card */}
-            <div className="relative rounded-2xl border border-white/[0.08] bg-ink-850 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="relative flex items-start sm:items-center gap-4">
-                <div className="w-11 h-11 rounded-xl bg-ink-800 border border-white/[0.08] flex items-center justify-center text-slate-300 flex-shrink-0">
-                  <Code2 className="w-5 h-5" strokeWidth={1.5} />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">Today’s problem · Day 1</span>
-                  </div>
-                  <h3 className="text-[17px] font-medium text-white flex items-baseline gap-3 flex-wrap">
-                    <span>1. Two Sum</span>
-                    <span className="text-[13px] font-normal text-emerald-400">Easy</span>
-                    <span className="text-[13px] font-normal text-slate-500">Arrays & Hashing</span>
-                  </h3>
-                  <p className="text-[13px] text-slate-400">
-                    Asked at Google, Meta and Amazon · about 15 min
-                  </p>
-                </div>
-              </div>
+            {/* Today's problem: one a day for everyone, counted toward the streak */}
+            <DailyProblemCard
+              problem={today}
+              solvedToday={solvedToday}
+              streak={streak}
+              onSolve={() => openEditor(today, { kind: 'daily', id: today.id })}
+            />
 
-              <div className="relative flex items-center gap-3 flex-shrink-0">
-                <button
-                  onClick={() => setActiveEditorProblem({
-                    id: "nc-1",
-                    number: 1,
-                    title: "Two Sum",
-                    difficulty: "Easy",
-                    topic: "Arrays & Hashing"
-                  })}
-                  className="flex items-center gap-2 h-10 px-4 rounded-[10px] btn-primary-glow text-white font-medium text-sm active:scale-[0.98]"
-                >
-                  <span>Solve in editor</span>
-                  <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
-                </button>
-              </div>
-            </div>
             {/* DailyCode 150 Personalized Planner Featured Banner */}
             <div className="rounded-2xl border border-white/[0.08] bg-ink-850 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div className="space-y-1">
@@ -618,7 +579,7 @@ export default function PracticeHub({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
               {/* Domain Category Selector Pills */}
               <div className="flex items-center gap-1 overflow-x-auto p-1 rounded-xl bg-ink-850 border border-white/[0.08] scrollbar-none w-fit max-w-full">
-                {['DSA', 'Core CS', 'System Design', 'Data Engineering'].map((cat) => (
+                {['DSA', 'Core CS', 'System Design'].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
@@ -646,7 +607,7 @@ export default function PracticeHub({
               </div>
             </div>
 
-            {/* ── TWO-COLUMN MAIN VIEW (Sheets on Left, Promotion & Planner on Right) ── */}
+            {/* ── TWO-COLUMN MAIN VIEW: sheets on the left, revision and today on the right ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* LEFT 2 COLS: Curriculum Sheets Grouped by Section */}
@@ -660,9 +621,6 @@ export default function PracticeHub({
                   <div className="flex items-center justify-between">
                     <h2 className="text-[15px] font-medium text-white flex items-baseline gap-3">
                       <span>{sectionName}</span>
-                      {sectionName === 'Start Coding' && (
-                        <span className="text-[13px] font-normal text-slate-500">Free certification</span>
-                      )}
                     </h2>
                   </div>
 
@@ -683,7 +641,7 @@ export default function PracticeHub({
                                   {sheet.title}
                                 </h3>
                                 <span className="text-xs text-slate-500">
-                                  {sheet.tag}
+                                  {sheet.live ? sheet.tag : 'Coming soon'}
                                 </span>
                               </div>
                             </div>
@@ -692,32 +650,28 @@ export default function PracticeHub({
                           <p className="text-[13px] text-slate-400 line-clamp-2 leading-[1.55]">
                             {sheet.description}
                           </p>
-
-                          {/* Stats Metrics */}
-                          <div className="flex items-center gap-2 font-mono text-xs tabular-nums text-slate-500 flex-wrap">
-                            <span>{sheet.modules}</span>
-                            <span aria-hidden>·</span>
-                            <span>{sheet.topics}</span>
-                            {sheet.hours && (
-                              <>
-                                <span aria-hidden>·</span>
-                                <span>{sheet.hours}</span>
-                              </>
-                            )}
-                          </div>
                         </div>
 
-                        {/* Explore -> Button */}
                         <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between">
-                          <span className="text-xs text-slate-500">Free</span>
-
-                          <button
-                            onClick={() => setSelectedSheet(sheet)}
-                            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] bg-ink-800 border border-white/[0.08] hover:border-white/[0.14] text-white transition-colors active:scale-[0.98]"
-                          >
-                            <span>Open</span>
-                            <ArrowRight className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
-                          </button>
+                          <span className="text-xs text-slate-500">
+                            {sheet.live ? 'Free' : `${sheet.syllabus.length} parts planned`}
+                          </span>
+                          {sheet.live ? (
+                            <button
+                              onClick={() => setActiveView('planner')}
+                              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] btn-primary-glow font-medium active:scale-[0.98]"
+                            >
+                              <span>Open</span>
+                              <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setSelectedSheet(sheet)}
+                              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] bg-ink-800 border border-white/[0.08] hover:border-white/[0.14] text-white transition-colors active:scale-[0.98]"
+                            >
+                              <span>See outline</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -727,41 +681,16 @@ export default function PracticeHub({
             })}
           </div>
 
-          {/* RIGHT 1 COL: Promotional Garba Sale Widget + Daily Planner Widget */}
+          {/* RIGHT 1 COL: revision queue and today's tasks */}
           <div className="space-y-6">
-            
-            {/* Promo Card: CodeStreak Pro Pass */}
-            <div className="p-6 rounded-2xl bg-ink-850 border border-white/[0.08] space-y-4 relative">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-slate-500">Pro</span>
-                  <h3 className="text-[17px] font-medium text-white mt-1">
-                    {BRAND.name} Pro
-                  </h3>
-                </div>
 
-                {/* Ticket coupon visual */}
-                <Ticket className="w-5 h-5 text-slate-500" strokeWidth={1.5} aria-hidden />
-              </div>
-
-              <div className="h-11 px-3 rounded-[10px] bg-ink-800 border border-white/[0.08] text-[13px] text-slate-400 flex items-center justify-between">
-                <span>Access code</span>
-                <span className="font-mono text-white">
-                  ZERO2026
-                </span>
-              </div>
-
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText('ZERO2026');
-                                    alert("Access code ZERO2026 copied");
-                }}
-                className="w-full h-10 rounded-[10px] text-sm flex items-center justify-center gap-2 bg-ink-800 border border-white/[0.08] hover:border-white/[0.14] text-white transition-colors active:scale-[0.98]"
-              >
-                <span>Copy code and unlock</span>
-                <ChevronRight className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
-              </button>
-            </div>
+            <RevisionQueueCard
+              schedule={schedule}
+              hasPlan={Boolean(plan)}
+              onReview={(item) => openEditor(item.question, { kind: 'review', id: item.question.id })}
+              onMarkReviewed={markReviewed}
+              onOpenPlanner={() => setActiveView('planner')}
+            />
 
             {/* Daily Planner Widget */}
             <div className="p-6 rounded-2xl bg-ink-850 border border-white/[0.08] space-y-4">
@@ -860,9 +789,7 @@ export default function PracticeHub({
                     {renderSheetIcon(selectedSheet, 28)}
                   </div>
                   <div>
-                    <span className="text-xs text-slate-500">
-                      {selectedSheet.tag}
-                    </span>
+                    <span className="text-xs text-slate-500">Coming soon</span>
                     <h2 className="mt-1 text-xl font-medium text-white">
                       {selectedSheet.title}
                     </h2>
@@ -881,88 +808,41 @@ export default function PracticeHub({
                 </button>
               </div>
 
-              {/* Modal Body: Syllabus Step List */}
-              <div className="p-6 overflow-y-auto space-y-4 flex-1">
-                <div className="flex items-center justify-between text-[13px] text-slate-500">
-                  <span>{selectedSheet.syllabus.length} steps</span>
-                  <span>Check a step when you finish it</span>
-                </div>
-
-                <div className="space-y-1">
-                  {selectedSheet.syllabus.map((step, i) => {
-                    const isChecked = completedTopicIds.includes(step.id);
-                    return (
-                      <div
-                        key={step.id}
-                        className={`h-12 px-3 rounded-[10px] transition-colors flex items-center justify-between gap-3 hover:bg-white/[0.03] ${
-                          isChecked ? 'text-slate-500' : 'text-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <button
-                            onClick={() => toggleTopicCheck(step.id)}
-                            className="flex-shrink-0 rounded-[4px]"
-                            aria-label={isChecked ? 'Mark not done' : 'Mark done'}
-                          >
-                            {isChecked ? (
-                              <span className="grid place-items-center w-4 h-4 rounded-[4px] bg-brand-500 text-white"><Check className="w-3 h-3" strokeWidth={2.5} /></span>
-                            ) : (
-                              <span className="block w-4 h-4 rounded-[4px] border border-white/[0.14] hover:border-white/30 transition-colors" />
-                            )}
-                          </button>
-                          <span className={`text-[13px] sm:text-sm truncate ${isChecked ? 'line-through decoration-slate-600' : ''}`}>
-                            {step.title}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="font-mono text-xs text-slate-500">
-                            {step.count}
-                          </span>
-                          <button
-                            onClick={() => {
-                              setSelectedSheet(null);
-                              setActiveEditorProblem({
-                                id: step.id,
-                                title: step.title,
-                                difficulty: 'Medium',
-                                topic: selectedSheet?.title || 'DSA'
-                              });
-                            }}
-                            className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg hover:bg-white/[0.06] text-brand-400 text-[13px] transition-colors active:scale-[0.98]"
-                            title="Open in the code editor"
-                          >
-                            <Code2 className="w-4 h-4" strokeWidth={1.5} />
-                            <span>Solve</span>
-                          </button>
-                          <a
-                            href="https://leetcode.com/problemset/all/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-8 h-8 grid place-items-center rounded-lg hover:bg-white/[0.06] text-slate-500 hover:text-white transition-colors"
-                            title="Open on LeetCode"
-                            aria-label="Open on LeetCode"
-                          >
-                            <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Outline: what the sheet will cover */}
+              <div className="p-6 overflow-y-auto flex-1">
+                <p className="text-[13px] text-slate-400">
+                  We’re still writing the problems for this sheet. Here’s what it will cover.
+                </p>
+                <ol className="mt-4 divide-y divide-white/[0.06] border-y border-white/[0.06]">
+                  {selectedSheet.syllabus.map((step, i) => (
+                    <li key={step} className="h-11 px-1 flex items-center gap-4 text-[13px] sm:text-sm text-slate-200">
+                      <span className="w-6 font-mono text-xs tabular-nums text-slate-500">{String(i + 1).padStart(2, '0')}</span>
+                      <span className="truncate">{step}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
 
-              {/* Modal Footer */}
+              {/* Footer: the sheet that works today */}
               <div className="p-4 px-6 border-t border-white/[0.08] bg-ink-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <span className="text-[13px] text-slate-500">
-                  Progress saves as you check steps
+                  Until then, DailyCode 150 covers the same core patterns
                 </span>
-                <button
-                  onClick={() => setSelectedSheet(null)}
-                  className="h-9 px-4 rounded-lg bg-slate-100 hover:bg-white text-ink-900 font-medium text-[13px] transition-colors active:scale-[0.98]"
-                >
-                  Done
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedSheet(null)}
+                    className="h-9 px-3 rounded-lg text-[13px] text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => { setSelectedSheet(null); setActiveView('planner'); }}
+                    className="h-9 px-4 rounded-lg btn-primary-glow font-medium text-[13px] inline-flex items-center gap-2 active:scale-[0.98]"
+                  >
+                    Open DailyCode 150
+                    <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

@@ -608,10 +608,13 @@ export const api = {
     plan.days.forEach(day => {
       day.questions.forEach(q => {
         if (q.id === questionId) {
-          Object.assign(q, updates);
+          const { reviewed, ...fields } = updates;
+          Object.assign(q, fields);
           if (updates.completed !== undefined) {
             q.completedAt = updates.completed ? new Date().toISOString() : null;
           }
+          // Same as the backend: `reviewed: true` records one spaced-revision review
+          if (reviewed === true) q.reviews = [...(Array.isArray(q.reviews) ? q.reviews : []), new Date().toISOString()];
           updatedQ = q;
         }
       });

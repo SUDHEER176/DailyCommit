@@ -97,24 +97,6 @@
     ],
     "hiddenTestCases": []
   },
-  "encode-and-decode-strings": {
-    "id": "nc-271",
-    "number": 271,
-    "title": "Encode and Decode Strings",
-    "difficulty": "Medium",
-    "contentHtml": null,
-    "starterTemplates": {},
-    "examples": [],
-    "constraints": [],
-    "sampleTestCases": [
-      {
-        "id": 1,
-        "input": "[\"Hello\",\"World\"]",
-        "expected": "Expected output"
-      }
-    ],
-    "hiddenTestCases": []
-  },
   "valid-sudoku": {
     "id": "nc-36",
     "number": 36,
@@ -540,6 +522,268 @@
       "return": {
         "type": "list<String>",
         "dealloc": true
+      }
+    },
+    "cacheVersion": 2
+  },
+  "maximum-subarray": {
+    "id": "nc-53",
+    "number": 53,
+    "title": "Maximum Subarray",
+    "difficulty": "Medium",
+    "contentHtml": "<p>Given an integer array <code>nums</code>, find the <span data-keyword=\"subarray-nonempty\">subarray</span> with the largest sum, and return <em>its sum</em>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [-2,1,-3,4,-1,2,1,-5,4]\n<strong>Output:</strong> 6\n<strong>Explanation:</strong> The subarray [4,-1,2,1] has the largest sum 6.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [1]\n<strong>Output:</strong> 1\n<strong>Explanation:</strong> The subarray [1] has the largest sum 1.\n</pre>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [5,4,-1,7,8]\n<strong>Output:</strong> 23\n<strong>Explanation:</strong> The subarray [5,4,-1,7,8] has the largest sum 23.\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= nums.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>-10<sup>4</sup> &lt;= nums[i] &lt;= 10<sup>4</sup></code></li>\n</ul>\n\n<p>&nbsp;</p>\n<p><strong>Follow up:</strong> If you have figured out the <code>O(n)</code> solution, try coding another solution using the <strong>divide and conquer</strong> approach, which is more subtle.</p>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    int maxSubArray(vector<int>& nums) {\n        \n    }\n};",
+      "java": "class Solution {\n    public int maxSubArray(int[] nums) {\n        \n    }\n}",
+      "python": "class Solution(object):\n    def maxSubArray(self, nums):\n        \"\"\"\n        :type nums: List[int]\n        :rtype: int\n        \"\"\"\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar maxSubArray = function(nums) {\n    \n};"
+    },
+    "examples": [
+      {
+        "input": "nums = [-2,1,-3,4,-1,2,1,-5,4]",
+        "output": "6",
+        "explanation": "The subarray [4,-1,2,1] has the largest sum 6."
+      },
+      {
+        "input": "nums = [1]",
+        "output": "1",
+        "explanation": "The subarray [1] has the largest sum 1."
+      },
+      {
+        "input": "nums = [5,4,-1,7,8]",
+        "output": "23",
+        "explanation": "The subarray [5,4,-1,7,8] has the largest sum 23."
+      }
+    ],
+    "constraints": [
+      "1 <= nums.length <= 105",
+      "-104 <= nums[i] <= 104"
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "nums = [-2,1,-3,4,-1,2,1,-5,4]",
+        "args": [
+          "[-2,1,-3,4,-1,2,1,-5,4]"
+        ],
+        "expected": "6"
+      },
+      {
+        "id": 2,
+        "input": "nums = [1]",
+        "args": [
+          "[1]"
+        ],
+        "expected": "1"
+      },
+      {
+        "id": 3,
+        "input": "nums = [5,4,-1,7,8]",
+        "args": [
+          "[5,4,-1,7,8]"
+        ],
+        "expected": "23"
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "maxSubArray",
+      "params": [
+        {
+          "name": "nums",
+          "type": "integer[]"
+        }
+      ],
+      "return": {
+        "type": "integer"
+      }
+    },
+    "cacheVersion": 2
+  },
+  "partition-labels": {
+    "id": "nc-763",
+    "number": 763,
+    "title": "Partition Labels",
+    "difficulty": "Medium",
+    "contentHtml": "<p>You are given a string <code>s</code>. We want to partition the string into as many parts as possible so that each letter appears in at most one part. For example, the string <code>&quot;ababcc&quot;</code> can be partitioned into <code>[&quot;abab&quot;, &quot;cc&quot;]</code>, but partitions such as <code>[&quot;aba&quot;, &quot;bcc&quot;]</code> or <code>[&quot;ab&quot;, &quot;ab&quot;, &quot;cc&quot;]</code> are invalid.</p>\n\n<p>Note that the partition is done so that after concatenating all the parts in order, the resultant string should be <code>s</code>.</p>\n\n<p>Return <em>a list of integers representing the size of these parts</em>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;ababcbacadefegdehijhklij&quot;\n<strong>Output:</strong> [9,7,8]\n<strong>Explanation:</strong>\nThe partition is &quot;ababcbaca&quot;, &quot;defegde&quot;, &quot;hijhklij&quot;.\nThis is a partition so that each letter appears in at most one part.\nA partition like &quot;ababcbacadefegde&quot;, &quot;hijhklij&quot; is incorrect, because it splits s into less parts.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;eccbbbbdec&quot;\n<strong>Output:</strong> [10]\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= s.length &lt;= 500</code></li>\n\t<li><code>s</code> consists of lowercase English letters.</li>\n</ul>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    vector<int> partitionLabels(string s) {\n        \n    }\n};",
+      "java": "class Solution {\n    public List<Integer> partitionLabels(String s) {\n        \n    }\n}",
+      "python": "class Solution(object):\n    def partitionLabels(self, s):\n        \"\"\"\n        :type s: str\n        :rtype: List[int]\n        \"\"\"\n        ",
+      "javascript": "/**\n * @param {string} s\n * @return {number[]}\n */\nvar partitionLabels = function(s) {\n    \n};"
+    },
+    "examples": [
+      {
+        "input": "s = &quot;ababcbacadefegdehijhklij&quot;",
+        "output": "[9,7,8]",
+        "explanation": "The partition is &quot;ababcbaca&quot;, &quot;defegde&quot;, &quot;hijhklij&quot;.\nThis is a partition so that each letter appears in at most one part.\nA partition like &quot;ababcbacadefegde&quot;, &quot;hijhklij&quot; is incorrect, because it splits s into less parts."
+      },
+      {
+        "input": "s = &quot;eccbbbbdec&quot;",
+        "output": "[10]",
+        "explanation": ""
+      }
+    ],
+    "constraints": [
+      "1 <= s.length <= 500",
+      "s consists of lowercase English letters."
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "s = \"ababcbacadefegdehijhklij\"",
+        "args": [
+          "\"ababcbacadefegdehijhklij\""
+        ],
+        "expected": "[9,7,8]"
+      },
+      {
+        "id": 2,
+        "input": "s = \"eccbbbbdec\"",
+        "args": [
+          "\"eccbbbbdec\""
+        ],
+        "expected": "[10]"
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "partitionLabels",
+      "params": [
+        {
+          "name": "s",
+          "type": "string"
+        }
+      ],
+      "return": {
+        "type": "list<integer>"
+      }
+    },
+    "cacheVersion": 2
+  },
+  "generate-parentheses": {
+    "id": "nc-22",
+    "number": 22,
+    "title": "Generate Parentheses",
+    "difficulty": "Medium",
+    "contentHtml": "<p>Given <code>n</code> pairs of parentheses, write a function to <em>generate all combinations of well-formed parentheses</em>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n<pre><strong>Input:</strong> n = 3\n<strong>Output:</strong> [\"((()))\",\"(()())\",\"(())()\",\"()(())\",\"()()()\"]\n</pre><p><strong class=\"example\">Example 2:</strong></p>\n<pre><strong>Input:</strong> n = 1\n<strong>Output:</strong> [\"()\"]\n</pre>\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= n &lt;= 8</code></li>\n</ul>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    vector<string> generateParenthesis(int n) {\n        \n    }\n};",
+      "java": "class Solution {\n    public List<String> generateParenthesis(int n) {\n        \n    }\n}",
+      "python": "class Solution(object):\n    def generateParenthesis(self, n):\n        \"\"\"\n        :type n: int\n        :rtype: List[str]\n        \"\"\"\n        ",
+      "javascript": "/**\n * @param {number} n\n * @return {string[]}\n */\nvar generateParenthesis = function(n) {\n    \n};"
+    },
+    "examples": [
+      {
+        "input": "n = 3",
+        "output": "[\"((()))\",\"(()())\",\"(())()\",\"()(())\",\"()()()\"]",
+        "explanation": ""
+      },
+      {
+        "input": "n = 1",
+        "output": "[\"()\"]",
+        "explanation": ""
+      }
+    ],
+    "constraints": [
+      "1 <= n <= 8"
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "n = 3",
+        "args": [
+          "3"
+        ],
+        "expected": "[\"((()))\",\"(()())\",\"(())()\",\"()(())\",\"()()()\"]"
+      },
+      {
+        "id": 2,
+        "input": "n = 1",
+        "args": [
+          "1"
+        ],
+        "expected": "[\"()\"]"
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "generateParenthesis",
+      "params": [
+        {
+          "name": "n",
+          "type": "integer"
+        }
+      ],
+      "return": {
+        "type": "list<string>"
+      }
+    },
+    "cacheVersion": 2
+  },
+  "top-k-frequent-elements": {
+    "id": "nc-347",
+    "number": 347,
+    "title": "Top K Frequent Elements",
+    "difficulty": "Medium",
+    "contentHtml": "<p>Given an integer array <code>nums</code> and an integer <code>k</code>, return <em>the</em> <code>k</code> <em>most frequent elements</em>. You may return the answer in <strong>any order</strong>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">nums = [1,1,1,2,2,3], k = 2</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">[1,2]</span></p>\n</div>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">nums = [1], k = 1</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">[1]</span></p>\n</div>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">nums = [1,2,1,2,1,2,3,1,3,2], k = 2</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">[1,2]</span></p>\n</div>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= nums.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>-10<sup>4</sup> &lt;= nums[i] &lt;= 10<sup>4</sup></code></li>\n\t<li><code>k</code> is in the range <code>[1, the number of unique elements in the array]</code>.</li>\n\t<li>It is <strong>guaranteed</strong> that the answer is <strong>unique</strong>.</li>\n</ul>\n\n<p>&nbsp;</p>\n<p><strong>Follow up:</strong> Your algorithm&#39;s time complexity must be better than <code>O(n log n)</code>, where n is the array&#39;s size.</p>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        \n    }\n};",
+      "java": "class Solution {\n    public int[] topKFrequent(int[] nums, int k) {\n        \n    }\n}",
+      "python": "class Solution(object):\n    def topKFrequent(self, nums, k):\n        \"\"\"\n        :type nums: List[int]\n        :type k: int\n        :rtype: List[int]\n        \"\"\"\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @param {number} k\n * @return {number[]}\n */\nvar topKFrequent = function(nums, k) {\n    \n};"
+    },
+    "examples": [],
+    "constraints": [
+      "1 <= nums.length <= 105",
+      "-104 <= nums[i] <= 104",
+      "k is in the range [1, the number of unique elements in the array].",
+      "It is guaranteed that the answer is unique."
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "nums = [1,1,1,2,2,3]\nk = 2",
+        "args": [
+          "[1,1,1,2,2,3]",
+          "2"
+        ],
+        "expected": "[1,2]"
+      },
+      {
+        "id": 2,
+        "input": "nums = [1]\nk = 1",
+        "args": [
+          "[1]",
+          "1"
+        ],
+        "expected": "[1]"
+      },
+      {
+        "id": 3,
+        "input": "nums = [1,2,1,2,1,2,3,1,3,2]\nk = 2",
+        "args": [
+          "[1,2,1,2,1,2,3,1,3,2]",
+          "2"
+        ],
+        "expected": "[1,2]"
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "topKFrequent",
+      "params": [
+        {
+          "name": "nums",
+          "type": "integer[]"
+        },
+        {
+          "name": "k",
+          "type": "integer"
+        }
+      ],
+      "return": {
+        "type": "integer[]"
       }
     },
     "cacheVersion": 2

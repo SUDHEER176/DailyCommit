@@ -90,7 +90,10 @@ export function buildSpec({ problem, language, signatureSource, testCases }) {
   });
 
   const returnKind = metaKind(meta?.return?.type) || (/ListNode/.test(sig.returnType) ? 'list' : /TreeNode/.test(sig.returnType) ? 'tree' : 'value');
-  return { mode: 'function', fnName: sig.name, inPlaceIndex, returnType: sig.returnType, returnKind, params: sig.params, cases };
+  // Methods to call in order, each on the previous result. Usually just one; Encode and Decode
+  // Strings is checked as decode(encode(strs)).
+  const calls = Array.isArray(meta?.pipe) && meta.pipe.length ? meta.pipe : [sig.name];
+  return { mode: 'function', fnName: calls[0], calls, inPlaceIndex, returnType: sig.returnType, returnKind, params: sig.params, cases };
 }
 
 /**

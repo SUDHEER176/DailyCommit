@@ -1,4 +1,6 @@
 // Curated problem definitions with full descriptions, examples, starter code & test cases
+import { getPremiumProblem } from './premiumProblems';
+
 export const DETAILED_PROBLEMS = {
   "nc-1": {
     id: "nc-1",
@@ -603,7 +605,13 @@ public:
 export function getProblemDetails(problem) {
   if (!problem) return null;
   const id = problem.id || `nc-${problem.number}`;
-  
+
+  // LeetCode Premium problems: our own statement, starter code and tests
+  const premium = getPremiumProblem({ ...problem, id });
+  if (premium) {
+    return { ...problem, ...premium };
+  }
+
   if (DETAILED_PROBLEMS[id]) {
     return { ...problem, ...DETAILED_PROBLEMS[id] };
   }

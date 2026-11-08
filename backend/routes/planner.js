@@ -113,7 +113,8 @@ router.post('/generate', (req, res) => {
 router.patch('/question/:id', (req, res) => {
   const db = getDb();
   const { id } = req.params;
-  const { completed, isDifficult, solveStatus, notes } = req.body;
+  // `reviewed: true` records one spaced-revision review (day 3, 7 or 21) on the question
+  const { completed, isDifficult, solveStatus, notes, reviewed } = req.body;
 
   if (!db.studyPlan || !db.studyPlan.days) {
     return res.status(404).json({ error: 'No active study plan found. Please generate a plan first.' });
@@ -131,6 +132,7 @@ router.patch('/question/:id', (req, res) => {
         if (isDifficult !== undefined) q.isDifficult = Boolean(isDifficult);
         if (solveStatus !== undefined) q.solveStatus = solveStatus;
         if (notes !== undefined) q.notes = notes;
+        if (reviewed === true) q.reviews = [...(Array.isArray(q.reviews) ? q.reviews : []), new Date().toISOString()];
         updatedQuestion = { ...q };
       }
     });

@@ -143,6 +143,9 @@ export default function CodeWorkspace({
     const localDetails = getProblemDetails(initialProblem);
     setProblem(localDetails);
 
+    // Problems we wrote ourselves (LeetCode Premium) have nothing to fetch
+    if (localDetails?.authored) return;
+
     const slug = getProblemSlug(initialProblem);
     if (!slug) return;
 
@@ -163,7 +166,8 @@ export default function CodeWorkspace({
         title: remoteData.title || prev?.title,
         difficulty: remoteData.difficulty || prev?.difficulty,
         topic: prev?.topic || remoteData.topic,
-        contentHtml: remoteData.contentHtml,
+        contentHtml: remoteData.contentHtml || prev?.contentHtml,
+        meta: remoteData.meta || prev?.meta,
         starterTemplates: {
           ...(prev?.starterTemplates || {}),
           ...(remoteData.starterTemplates || {})

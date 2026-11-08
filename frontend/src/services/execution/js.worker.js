@@ -91,15 +91,20 @@ self.onmessage = ({ data }) => {
   console.log = (...a) => logs.push(a.map(fmt).join(' '));
   console.error = console.warn = console.info = console.log;
 
-  const exportName = spec.mode === 'design' ? spec.className : spec.fnName;
-  const load = () => new Function('ListNode', 'TreeNode', `${code}\nreturn typeof ${exportName} !== 'undefined' ? ${exportName} : undefined;`)(ListNode, TreeNode);
+  // Names the code must define: the class for design problems, else each function to call in order
+  const names = spec.mode === 'design' ? [spec.className] : (spec.calls || [spec.fnName]);
+  const load = () => new Function('ListNode', 'TreeNode',
+    `${code}\nreturn { ${names.map((n) => `${JSON.stringify(n)}: typeof ${n} !== 'undefined' ? ${n} : undefined`).join(', ')} };`,
+  )(ListNode, TreeNode);
 
   const cases = spec.cases.map((c) => {
     logs.length = 0;
     const start = performance.now();
     try {
-      const target = load();
-      if (typeof target !== 'function') throw new Error(`${exportName} is not defined`);
+      const defined = load();
+      const missing = names.find((n) => typeof defined[n] !== 'function');
+      if (missing) throw new Error(`${missing} is not defined`);
+      const target = defined[names[0]];
       let output;
       if (spec.mode === 'design') {
         let obj = null;
@@ -114,7 +119,8 @@ self.onmessage = ({ data }) => {
         const firstList = c.args.findIndex((a) => a.kind === 'list');
         const built = [];
         c.args.forEach((a, i) => { built[i] = makeArg(a, built, c.cyclePos, firstList, i); });
-        const r = target(...built);
+        let r = target(...built);
+        names.slice(1).forEach((n) => { r = defined[n](r); }); // e.g. decode(encode(strs))
         output = spec.inPlaceIndex !== null && spec.inPlaceIndex !== undefined ? toJson(built[spec.inPlaceIndex]) : toJson(r);
       }
       return { output, logs: logs.join('\n'), ms: performance.now() - start };

@@ -133,7 +133,11 @@ def __run(user_code, spec_json):
                 built = []
                 for i, a in enumerate(args):
                     built.append(__make_arg(a, built, case['cyclePos'], i == first_list))
-                r = getattr(solution(), spec['fnName'])(*built)
+                inst = solution()
+                calls = spec.get('calls') or [spec['fnName']]
+                r = getattr(inst, calls[0])(*built)
+                for name in calls[1:]:  # e.g. decode(encode(strs))
+                    r = getattr(inst, name)(r)
                 idx = spec.get('inPlaceIndex')
                 output = __json(built[idx]) if idx is not None else __json(r)
             results.append({'output': output, 'logs': buf.getvalue(), 'ms': (time.perf_counter() - start) * 1000})

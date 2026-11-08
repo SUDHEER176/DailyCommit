@@ -145,7 +145,13 @@ export function buildCppProgram(userCode, spec) {
           lines.push(`${type} a${k} = ${literal(type, a.value)};`);
         }
       });
-      const call = `Solution().${spec.fnName}(${c.args.map((_, k) => `a${k}`).join(', ')})`;
+      // One Solution object for every call; later calls take the previous result (decode(encode(strs)))
+      lines.push('Solution sol;');
+      const calls = spec.calls || [spec.fnName];
+      const call = calls.slice(1).reduce(
+        (inner, name) => `sol.${name}(${inner})`,
+        `sol.${calls[0]}(${c.args.map((_, k) => `a${k}`).join(', ')})`,
+      );
       if (spec.inPlaceIndex !== null && spec.inPlaceIndex !== undefined) {
         lines.push(`${call};`, `cout << "@@CASE ${i} OUT@@" << ser(a${spec.inPlaceIndex}) << endl;`);
       } else {

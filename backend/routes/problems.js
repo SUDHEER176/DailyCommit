@@ -93,6 +93,11 @@ router.get('/details/:slug', async (req, res) => {
     if (!q) {
       return res.status(404).json({ success: false, message: 'Question not found on LeetCode' });
     }
+    // Premium questions come back with no statement unless signed in with a paid account.
+    // Don't cache an empty problem; the frontend has its own version of these.
+    if (!q.content) {
+      return res.status(404).json({ success: false, premium: true, message: 'This is a LeetCode Premium question' });
+    }
 
     // Parse starter templates
     const templates = {};
