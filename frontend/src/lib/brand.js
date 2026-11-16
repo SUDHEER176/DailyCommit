@@ -4,7 +4,7 @@ export const BRAND = {
   domain: 'dailycommit.dev',
   // Placeholder contact details carried over from the original page. Replace with real ones before launch.
   supportEmail: 'support@dailycommit.dev',
-  whatsappNumber: '+1234567890',
+  whatsappNumber: '+919381997827',
 };
 
 export default BRAND;
