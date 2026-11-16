@@ -5,9 +5,16 @@ let hidden = false;
 
 const $ = (id) => document.getElementById(id);
 
+// Resolves when the intro video in index.html ends or is skipped (immediately when there is no intro).
+const introDone = window.__splashIntro || Promise.resolve();
+
 export function hideSplash() {
   if (hidden) return;
   hidden = true;
+  introDone.then(fadeOut);
+}
+
+function fadeOut() {
   const el = $('splash');
   if (!el) return;
   const wait = Math.max(0, MIN_VISIBLE_MS - (performance.now() - start));

@@ -18,6 +18,16 @@
         document.documentElement.classList.remove('dark', 'light');
         document.documentElement.classList.add(t);
       } catch (e) {}
+      // Cinematic intro: once per tab session, never for reduced motion or data saver.
+      try {
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var saveData = navigator.connection && navigator.connection.saveData;
+        if (/[?&]introAt=/.test(location.search)) document.documentElement.classList.add('sp-intro');
+        else if (!reduce && !saveData && !sessionStorage.getItem('dc-intro')) {
+          sessionStorage.setItem('dc-intro', '1');
+          document.documentElement.classList.add('sp-intro');
+        }
+      } catch (e) {}
     </script>
     <style>
       #splash {
@@ -26,8 +36,47 @@
         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
         background: var(--sp-bg); color: var(--sp-text);
         font-family: 'Geist', system-ui, sans-serif;
-        transition: opacity .45s cubic-bezier(.22,1,.36,1), visibility .45s;
+        transition: opacity .45s cubic-bezier(.22,1,.36,1), visibility .45s, background-color .6s cubic-bezier(.22,1,.36,1);
       }
+      /* Intro (public/intro/intro.js): canvas heatmap + real-text lockup, full screen, sharp at any resolution. */
+      #splash .ic { position: absolute; inset: 0; overflow: hidden; opacity: 0; pointer-events: none; transition: opacity .6s cubic-bezier(.22,1,.36,1); }
+      html.sp-intro #splash .ic { opacity: 1; }
+      #intro-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+      #splash .ic-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.4) 100%); }
+      html.light #splash .ic-vignette { background: radial-gradient(ellipse at center, transparent 55%, rgba(17,24,39,.07) 100%); }
+      #splash .ic-grain { position: absolute; inset: -64px; opacity: .045; animation: ic-grain .4s steps(1) infinite; }
+      html.light #splash .ic-grain { opacity: .035; }
+      @keyframes ic-grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-37px, 21px); } 50% { transform: translate(18px, -45px); } 75% { transform: translate(-52px, -11px); } }
+      #intro-lockup { --fs: clamp(28px, 3.1vw, 64px); position: absolute; left: 50%; top: 50%; width: max-content; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1); }
+      #intro-lockup.out { opacity: 0; transform: translate(-50%, -50%) scale(.98); }
+      #splash .ic-row { display: flex; align-items: center; column-gap: calc(var(--fs) * .42); transform: translateX(var(--shift, 0px)); transition: transform 1s cubic-bezier(.16,1,.3,1); }
+      #intro-lockup.reveal .ic-row { transform: none; }
+      #splash .ic-logo { display: grid; grid-template-columns: repeat(2, calc(var(--fs) * .62)); gap: calc(var(--fs) * .12); }
+      #splash .ic-logo span { width: calc(var(--fs) * .62); height: calc(var(--fs) * .62); border-radius: calc(var(--fs) * .16); background: rgb(158,165,178); opacity: 0; }
+      html.light #splash .ic-logo span { background: rgb(122,130,150); }
+      #splash .ic-logo span.on:nth-child(1) { opacity: .45; }
+      #splash .ic-logo span.on:nth-child(2) { opacity: .7; }
+      #splash .ic-logo span.on:nth-child(3) { opacity: 1; }
+      #splash .ic-logo span:nth-child(4), html.light #splash .ic-logo span:nth-child(4) { background: #0066ff; }
+      #splash .ic-logo span.on:nth-child(4) { opacity: 1; animation: ic-pop .6s cubic-bezier(.22,1,.36,1) both, ic-glow 1.4s ease-out forwards; }
+      @keyframes ic-pop { 0% { transform: scale(.7); } 55% { transform: scale(1.08); } 100% { transform: scale(1); } }
+      @keyframes ic-glow { 0% { box-shadow: 0 0 0 0 rgba(0,102,255,0); } 30% { box-shadow: 0 0 calc(var(--fs) * .9) calc(var(--fs) * .08) rgba(0,102,255,.5); } 100% { box-shadow: 0 0 calc(var(--fs) * .5) 0 rgba(0,102,255,.2); } }
+      #splash .ic-name { font-size: var(--fs); line-height: 1; font-weight: 500; white-space: nowrap; color: #eef0f5; letter-spacing: .08em; opacity: 0; clip-path: inset(0 100% 0 0); transition: clip-path 1s cubic-bezier(.16,1,.3,1), letter-spacing 1.2s cubic-bezier(.16,1,.3,1), opacity .4s; }
+      #intro-lockup.reveal .ic-name { opacity: 1; letter-spacing: -.02em; clip-path: inset(0 -10% 0 0); }
+      #splash .ic-tag { margin-top: calc(var(--fs) * .5); font-size: max(13px, calc(var(--fs) * .3)); color: #7a8296; opacity: 0; transform: translateY(6px); transition: opacity .7s cubic-bezier(.22,1,.36,1) .6s, transform .7s cubic-bezier(.22,1,.36,1) .6s; }
+      #intro-lockup.reveal .ic-tag { opacity: 1; transform: none; }
+      html.light #splash .ic-name { color: #111827; }
+      html.light #splash .ic-tag { color: #6b7487; }
+      #splash .sp-logo, #splash .sp-name, #splash .sp-bar, #splash .sp-status, #splash .sp-skip { transition: opacity .6s cubic-bezier(.22,1,.36,1); }
+      #splash .sp-intro-skip { position: absolute; right: 24px; bottom: 24px; display: none; padding: 6px 12px; border: 0; border-radius: 8px; background: transparent; color: #7a8296; font: inherit; font-size: 13px; cursor: pointer; transition: color .2s; }
+      #splash .sp-intro-skip:hover { color: #eef0f5; }
+      #splash .sp-intro-skip:focus-visible, #splash .sp-skip:focus-visible { outline: 2px solid #0066ff; outline-offset: 2px; }
+      html.light #splash .sp-intro-skip { color: #6b7487; }
+      html.light #splash .sp-intro-skip:hover { color: #111827; }
+      #splash .sp-sound { right: auto; left: 24px; }
+      html.sp-intro #splash .sp-intro-skip { display: block; }
+      html.sp-intro #splash .sp-intro-skip[hidden] { display: none; }
+      html.sp-intro #splash .sp-logo, html.sp-intro #splash .sp-name, html.sp-intro #splash .sp-bar, html.sp-intro #splash .sp-status, html.sp-intro #splash .sp-skip { opacity: 0; pointer-events: none; }
       html.light #splash { --sp-bg: #f5f7fa; --sp-cell: #111827; --sp-text: #111827; --sp-muted: #6b7487; --sp-track: rgba(17,24,39,.08); }
       #splash.splash-hide { opacity: 0; visibility: hidden; }
       #splash .sp-logo { display: grid; grid-template-columns: repeat(2, 22px); gap: 6px; }
@@ -54,12 +103,27 @@
   </head>
   <body class="font-sans antialiased min-h-screen">
     <div id="splash" role="status" aria-live="polite" aria-label="Loading Daily Commit">
+      <div class="ic" aria-hidden="true">
+        <canvas id="intro-canvas"></canvas>
+        <div id="intro-lockup">
+          <div class="ic-row">
+            <div class="ic-logo"><span></span><span></span><span></span><span></span></div>
+            <div class="ic-name">Daily Commit</div>
+          </div>
+          <div class="ic-tag">One problem a day. Every day.</div>
+        </div>
+        <div class="ic-vignette"></div>
+        <div id="intro-grain" class="ic-grain"></div>
+      </div>
+      <button id="splash-sound" class="sp-intro-skip sp-sound" type="button" hidden>Sound on</button>
+      <button id="splash-intro-skip" class="sp-intro-skip" type="button">Skip intro</button>
       <div class="sp-logo" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
       <div class="sp-name">Daily Commit</div>
       <div class="sp-bar" aria-hidden="true"></div>
       <p id="splash-status" class="sp-status">Starting up</p>
       <button id="splash-skip" class="sp-skip" type="button" hidden>Continue offline</button>
     </div>
+    <script src="/intro/intro.js"></script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
