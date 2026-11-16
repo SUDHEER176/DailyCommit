@@ -208,7 +208,8 @@ npm run preview
 | `DATABASE_URL` | Accounts and per-user data | Neon connection string; use the pooled host |
 | `PORT` | | Defaults to `5000` |
 | `GOOGLE_CLIENT_ID` | Google sign-in | OAuth client ID (Web application) |
-| `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` `MAIL_FROM` | Emailing verification codes | Without SMTP, codes are printed in the server console |
+| `BREVO_API_KEY` or `RESEND_API_KEY`, plus `MAIL_FROM` | Emailing verification codes over HTTPS (use this on Render, which blocks SMTP ports) | Without any mail settings, codes are printed in the server console |
+| `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` | SMTP fallback, fine for local use | Used only when no API key is set |
 | `RAZORPAY_KEY_ID` `RAZORPAY_KEY_SECRET` | Pro payments | Start with `rzp_test_` keys |
 | `RAZORPAY_WEBHOOK_SECRET` | Payment webhook | Optional but recommended |
 | `JUDGE0_API_KEY` | C++ and Java Run and Submit | RapidAPI key for Judge0 CE |

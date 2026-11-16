@@ -12,7 +12,7 @@ import executeRouter, { executeStatus } from './routes/execute.js';
 import { initDb, flushDb, storageMode } from './data/store.js';
 import { pool, ping } from './data/neon.js';
 import { requireUser, googleClientId } from './data/auth.js';
-import { mailConfigured, verifyMailer } from './data/mailer.js';
+import { mailConfigured, mailProvider, verifyMailer } from './data/mailer.js';
 
 const app = express();
 // Render and similar hosts sit behind one proxy; this makes req.ip the visitor's address (used by rate limits)
@@ -64,10 +64,13 @@ async function start() {
         : '[billing] Razorpay off, set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to take payments');
       if (mailConfigured) {
         verifyMailer()
-          .then(() => console.log('[mail] SMTP ready, verification codes will be emailed'))
-          .catch((err) => console.error('[mail] SMTP login failed:', err.message));
+          .then(() => console.log(`[mail] ${mailProvider} ready, verification codes will be emailed`))
+          .catch((err) => console.error(`[mail] ${mailProvider} check failed:`, err.message,
+            mailProvider === 'smtp' && /timeout/i.test(err.message)
+              ? '(this host probably blocks SMTP ports; set BREVO_API_KEY or RESEND_API_KEY instead)'
+              : ''));
       } else {
-        console.log('[mail] SMTP not set, verification codes are printed here instead of emailed');
+        console.log('[mail] Email not set, verification codes are printed here instead of emailed');
       }
     } else {
       console.log('[storage] DATABASE_URL not set, using data/db.json. Accounts are off');
