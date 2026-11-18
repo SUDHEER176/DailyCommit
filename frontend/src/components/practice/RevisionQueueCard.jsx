@@ -28,23 +28,35 @@ function Stages({ stage }) {
   );
 }
 
+const RATINGS = [
+  ['hard', 'Hard', 'Struggled: bring it back tomorrow'],
+  ['ok', 'Good', 'Got it with some effort'],
+  ['easy', 'Easy', 'Got it straight away: wait longer next time'],
+];
+
 /**
- * Problems coming back for review on days 3, 7 and 21. "Review" opens the editor and an accepted
- * submit records the review; "Mark reviewed" records it without solving here.
+ * Problems coming back for review. "Review" opens the editor and an accepted submit records the
+ * review; the other buttons record it without solving here.
+ * Free: fixed reviews on days 3, 7 and 21, and one "Done" button.
+ * Smart revision (Pro, `smart`): gaps adapt to how each problem went, so each review is rated
+ * Hard, Good or Easy, and items carry their own label and reason.
  */
-export default function RevisionQueueCard({ schedule, hasPlan, onReview, onMarkReviewed, onOpenPlanner }) {
+export default function RevisionQueueCard({ schedule, hasPlan, onReview, onMarkReviewed, onOpenPlanner, smart = false, onUpgrade = null }) {
   const [marking, setMarking] = useState(null);
   const { due, upcoming, mastered } = schedule;
 
-  const mark = async (item) => {
+  const mark = async (item, result) => {
     setMarking(item.question.id);
-    try { await onMarkReviewed(item); } finally { setMarking(null); }
+    try { await onMarkReviewed(item, result); } finally { setMarking(null); }
   };
+  const smallButton = 'h-7 px-2 rounded-md text-xs text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50 inline-flex items-center gap-1';
 
   return (
     <section className="p-6 rounded-2xl bg-ink-850 border border-white/[0.08] space-y-4" aria-labelledby="revision-title">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 id="revision-title" className="text-[15px] font-medium text-white">Revision</h3>
+        <h3 id="revision-title" className="text-[15px] font-medium text-white">
+          Revision{smart && <span className="ml-2 font-mono text-[11px] font-normal text-brand-400">Smart</span>}
+        </h3>
         <span className="font-mono text-xs tabular-nums text-slate-500">
           {due.length} due{mastered > 0 ? ` · ${mastered} mastered` : ''}
         </span>
@@ -53,7 +65,9 @@ export default function RevisionQueueCard({ schedule, hasPlan, onReview, onMarkR
       {!hasPlan ? (
         <div className="py-2 space-y-3">
           <p className="text-[13px] text-slate-400">
-            Star a problem, or mark it solved with a hint, and it comes back here on days 3, 7 and 21.
+            {smart
+              ? 'Problems you struggle with come back here sooner, and the ones you know well wait longer.'
+              : 'Problems you struggle with, or star, come back here on days 3, 7 and 21.'}
           </p>
           <button
             onClick={onOpenPlanner}
@@ -66,7 +80,7 @@ export default function RevisionQueueCard({ schedule, hasPlan, onReview, onMarkR
         <div className="py-2 text-center space-y-1">
           <RotateCcw className="w-5 h-5 mx-auto text-slate-500" strokeWidth={1.5} aria-hidden />
           <p className="text-[13px] text-white">Nothing to revise yet</p>
-          <p className="text-xs text-slate-500">Star a tricky problem in your plan and it shows up here</p>
+          <p className="text-xs text-slate-500">Solve a few problems; the ones you struggle with, or star, come back here</p>
         </div>
       ) : (
         <>
@@ -79,22 +93,30 @@ export default function RevisionQueueCard({ schedule, hasPlan, onReview, onMarkR
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${DIFF_DOT[q.difficulty] || 'bg-slate-500'}`} aria-hidden />
                       <span className="flex-1 truncate text-[13px] text-slate-200">{q.title}</span>
-                      <Stages stage={item.stage} />
+                      {!item.smart && <Stages stage={item.stage} />}
                     </div>
                     <div className="mt-1.5 pl-3.5 flex items-center justify-between gap-2">
                       <span className={`text-xs ${item.daysUntil < 0 ? 'text-amber-300' : 'text-slate-500'}`}>
-                        Day {item.reviewDay} review · {whenLabel(item)}
+                        {item.smart ? `${item.reason} · ${whenLabel(item)}` : `Day ${item.reviewDay} review${item.attemptOnly ? ` · ${item.reason}` : ''} · ${whenLabel(item)}`}
                       </span>
                       <span className="flex items-center gap-1">
-                        <button
-                          onClick={() => mark(item)}
-                          disabled={marking === q.id}
-                          className="h-7 px-2 rounded-md text-xs text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50 inline-flex items-center gap-1"
-                          title="Record this review without solving here"
-                        >
-                          {marking === q.id ? <Spinner size={12} label="Saving" /> : <Check className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                          Done
-                        </button>
+                        {item.smart ? (
+                          marking === q.id ? <Spinner size={12} label="Saving" /> : RATINGS.map(([value, label, hint]) => (
+                            <button key={value} onClick={() => mark(item, value)} className={smallButton} title={hint}>
+                              {label}
+                            </button>
+                          ))
+                        ) : (
+                          <button
+                            onClick={() => mark(item)}
+                            disabled={marking === q.id}
+                            className={smallButton}
+                            title="Record this review without solving here"
+                          >
+                            {marking === q.id ? <Spinner size={12} label="Saving" /> : <Check className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                            Done
+                          </button>
+                        )}
                         <button
                           onClick={() => onReview(item)}
                           className="h-7 px-2 rounded-md text-xs text-white bg-ink-800 border border-white/[0.08] hover:border-white/[0.14] transition-colors inline-flex items-center gap-1"
@@ -120,13 +142,20 @@ export default function RevisionQueueCard({ schedule, hasPlan, onReview, onMarkR
                 {upcoming.slice(0, 3).map((item) => (
                   <li key={item.question.id} className="flex items-center justify-between gap-3 h-7 px-2.5 text-[13px]">
                     <span className="truncate text-slate-400">{item.question.title}</span>
-                    <span className="shrink-0 font-mono text-xs tabular-nums text-slate-500">Day {item.reviewDay} · {whenLabel(item)}</span>
+                    <span className="shrink-0 font-mono text-xs tabular-nums text-slate-500">{item.smart ? whenLabel(item) : `Day ${item.reviewDay} · ${whenLabel(item)}`}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
         </>
+      )}
+
+      {!smart && onUpgrade && (
+        <p className="pt-3 border-t border-white/[0.06] text-xs text-slate-500">
+          Smart revision brings back what you struggled with sooner.{' '}
+          <button type="button" onClick={onUpgrade} className="text-brand-400 hover:text-brand-300">Pro</button>
+        </p>
       )}
     </section>
   );

@@ -161,7 +161,13 @@ export default function PersonalizedPlannerView({ onOpenWizardDirect = false }) 
         <CodeWorkspace
           problem={activeCodeProblem}
           onBack={() => setActiveCodeProblem(null)}
-          onProblemSolved={() => actions.toggleComplete(activeCodeProblem)}
+          onProblemSolved={() => {
+            // Only ever mark done: toggling would undo a problem that was already solved,
+            // and activeCodeProblem is a snapshot, so read the current state from the plan
+            const current = allQuestions.find((q) => q.id === activeCodeProblem.id);
+            if (current && !current.completed) actions.toggleComplete(current);
+          }}
+          onOpenProblem={(p) => setActiveCodeProblem(allQuestions.find((q) => q.id === p.id) || p)}
         />
       </div>
     );

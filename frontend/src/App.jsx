@@ -16,6 +16,9 @@ import StatsCharts from './components/StatsCharts';
 import PracticeHub from './components/PracticeHub';
 import CodeWorkspace from './components/CodeWorkspace/CodeWorkspace';
 import PricingPage from './components/PricingPage';
+import ProNotice from './components/ProNotice';
+import TestingModeBanner from './components/TestingModeBanner';
+import { useAppMode } from './lib/appMode';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
@@ -45,6 +48,8 @@ export default function App() {
   const [problems, setProblems] = useState([]);
   const [roadmap, setRoadmap] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  // 'testing' (no sign-in, Pro free, payments off) or 'production', from the server
+  const appMode = useAppMode();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [stats, setStats] = useState({
     user: { streak: 7, name: 'Alex' },
@@ -239,6 +244,7 @@ export default function App() {
   if (isPracticeRoute) {
     return (
       <div className="min-h-screen w-full bg-slate-50 dark:bg-ink-900 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+        <TestingModeBanner mode={appMode} />
         <PracticeHub
           onNavigate={navigate}
           setActiveTab={setActiveTab}
@@ -277,8 +283,11 @@ export default function App() {
   return (
     <div className="relative min-h-screen bg-slate-50 dark:bg-ink-900 text-slate-900 dark:text-slate-100 flex flex-col overflow-x-clip pb-20 md:pb-0">
       
+      <TestingModeBanner mode={appMode} />
+
       {/* Navigation Header */}
       <Navbar
+        testingMode={appMode === 'testing'}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onNavigate={navigate}
@@ -293,13 +302,20 @@ export default function App() {
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
       />
 
+      {/* Pro ending soon, or just ended (Pro doesn't renew by itself) */}
+      <ProNotice key={currentUser?.proUntil || 'none'} currentUser={currentUser} onNavigate={navigate} />
+
       {/* Main Content Area: Dynamic View based on activeTab */}
       <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentPath === '/pricing' ? (
           <PricingPage
             currentUser={currentUser}
             onOpenAuthModal={() => setIsAuthModalOpen(true)}
-            onUserUpdate={(pro) => setCurrentUser((u) => (u ? { ...u, ...pro } : u))}
+            onUserUpdate={(pro) => {
+              // Also update the cached profile, so an offline reload still shows Pro
+              api.updateCachedUser(pro);
+              setCurrentUser((u) => (u ? { ...u, ...pro } : u));
+            }}
           />
         ) : (<>
         {activeTab === 'planner' && (

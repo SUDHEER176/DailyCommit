@@ -1,5 +1,6 @@
 // Daily problem and spaced-revision schedule for the practice hub.
 import problemList from '../data/neetcode150.json';
+import { attemptPerformance } from './recommender.js';
 
 const DAY_MS = 86400000;
 
@@ -36,9 +37,12 @@ export function markDailySolved(problemId, date = new Date()) {
 
 // ── Streak ──
 
-/** Days with a solve: planner solves plus daily problems, as a set of YYYY-MM-DD */
-export function activeDays(plan, dailyLog = {}) {
+/** Days with a solve: planner solves, daily problems and solves in the editor, as a set of YYYY-MM-DD */
+export function activeDays(plan, dailyLog = {}, attempts = {}) {
   const days = new Set(Object.keys(dailyLog));
+  Object.values(attempts).forEach((list) => (Array.isArray(list) ? list : []).forEach((a) => {
+    if (a.solved && a.solvedAt) days.add(localDay(new Date(a.solvedAt)));
+  }));
   (plan?.days || []).forEach((d) => d.questions.forEach((q) => {
     if (q.completed && q.completedAt) days.add(localDay(new Date(q.completedAt)));
   }));
@@ -66,7 +70,7 @@ export const needsRevision = (q) => Boolean(q.isDifficult || q.solveStatus === '
  * Reviews are due 3, 7 and 21 days after the problem was solved (or starred, if it wasn't marked solved).
  * After the third review it counts as mastered.
  */
-export function revisionSchedule(plan, today = new Date()) {
+export function revisionSchedule(plan, today = new Date(), extra = {}) {
   const addedAt = Object.fromEntries((plan?.revisionQueue || []).map((r) => [r.id, r.addedAt]));
   const due = [], upcoming = [];
   let mastered = 0;
@@ -92,10 +96,60 @@ export function revisionSchedule(plan, today = new Date()) {
     (offset <= 0 ? due : upcoming).push(item);
   });
 
+  // Problems solved outside any plan (e.g. from "Next up") that went badly, from the editor's
+  // attempts: the same 3 / 7 / 21 days, counted from when they were solved
+  const inPlan = new Set((plan?.days || []).flatMap((d) => (d.questions || []).map((q) => q.id)));
+  const byId = new Map((extra.problems || []).map((p) => [p.id, p]));
+  Object.entries(extra.attempts || {}).forEach(([problemId, list]) => {
+    const problem = byId.get(problemId);
+    if (!problem || inPlan.has(problemId)) return;
+    const reviews = extra.attemptReviews?.[problemId]?.reviews || [];
+    const first = (Array.isArray(list) ? list : []).slice()
+      .sort((a, b) => Date.parse(a.solvedAt || a.lastActiveAt || a.openedAt || 0) - Date.parse(b.solvedAt || b.lastActiveAt || b.openedAt || 0))
+      .find((a) => a.solved || a.submits || a.runs);
+    const perf = first ? attemptPerformance(first, problem.difficulty) : null;
+    const struggled = perf != null && (perf.performance < 0.5 || first.selfRating === 'hard') && Boolean(first.solved || first.submits);
+    if (!struggled && reviews.length === 0) return;
+    const anchorIso = first?.solvedAt || first?.lastActiveAt;
+    if (!anchorIso) return;
+    if (reviews.length >= REVIEW_DAYS.length) { mastered++; return; }
+
+    const dueDate = new Date(startOfDay(new Date(anchorIso)).getTime() + REVIEW_DAYS[reviews.length] * DAY_MS);
+    const offset = daysBetween(today, dueDate);
+    const item = {
+      question: { id: problemId, title: problem.title, number: problem.number, difficulty: problem.difficulty, topic: problem.topic, url: problem.url },
+      attemptOnly: true,
+      stage: reviews.length,
+      reviewDay: REVIEW_DAYS[reviews.length],
+      dueDate,
+      daysUntil: offset,
+      reason: first.solved ? 'Struggled with it' : 'Not solved yet',
+    };
+    (offset <= 0 ? due : upcoming).push(item);
+  });
+
   due.sort((a, b) => a.daysUntil - b.daysUntil);           // most overdue first
   upcoming.sort((a, b) => a.daysUntil - b.daysUntil);      // soonest first
   return { due, upcoming, mastered };
 }
+
+/**
+ * A review's Hard / Good / Easy rating from how solving it again in the editor went. Sent with
+ * the review; the server's smart revision uses it, the fixed schedule ignores it.
+ */
+export function reviewResultFromAttempt(attempt, difficulty) {
+  const perf = attemptPerformance(attempt, difficulty);
+  if (!perf) return 'ok';
+  if (perf.performance >= 0.8) return 'easy';
+  if (perf.performance < 0.45) return 'hard';
+  return 'ok';
+}
+
+/** A server smart-revision item: due date 'YYYY-MM-DD' (the person's calendar) → local Date */
+export const withLocalDueDate = (item) => {
+  const [y, m, d] = String(item.dueDate).split('-').map(Number);
+  return { ...item, dueDate: new Date(y, m - 1, d) };
+};
 
 /** The editor's problem object for a list entry or planned question */
 export const editorProblem = (q) => ({
@@ -107,5 +161,6 @@ export const editorProblem = (q) => ({
   url: q.url,
 });
 
+export const PROBLEMS = problemList;
 export const PROBLEM_COUNT = problemList.length;
 export const TOPIC_COUNT = new Set(problemList.map((p) => p.topic)).size;

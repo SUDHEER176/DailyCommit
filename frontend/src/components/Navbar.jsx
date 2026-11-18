@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useTheme } from '../context/ThemeContext';
 import CodeStreakLogo from './ui/CodeStreakLogo';
+import { isPro } from '@/lib/pro';
 
 // Section links. Icons are used by the mobile bottom bar only.
 export const navTabs = [
@@ -39,6 +40,7 @@ export default function Navbar({
   isTimerActive,
   currentUser,
   onOpenAuthModal,
+  testingMode = false, // no accounts in testing mode, so no sign-in button
 }) {
   const [isScrolled, setIsScrolled] = React.useState(false);
   const { theme, toggleTheme } = useTheme();
@@ -166,14 +168,20 @@ export default function Navbar({
               {theme === 'dark' ? <Sun size={16} strokeWidth={1.5} /> : <Moon size={16} strokeWidth={1.5} />}
             </button>
 
+            {testingMode ? (
+              <span className="inline-flex items-center h-8 px-3 ml-2 rounded-lg text-sm text-amber-700 dark:text-amber-300 bg-amber-500/10">Testing</span>
+            ) : (<>
             <button
               type="button"
               onClick={onOpenAuthModal}
               className="hidden md:inline-flex items-center gap-2 h-8 px-3 ml-2 rounded-lg text-sm text-slate-900 dark:text-white border border-slate-200 dark:border-white/[0.1] hover:border-slate-300 dark:hover:border-white/[0.18] hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors"
-              title={signedIn ? `Signed in as ${currentUser.name}` : 'Sign in'}
+              title={signedIn ? `Signed in as ${currentUser.name}${isPro(currentUser) ? ' · Pro' : ''}` : 'Sign in'}
             >
               {signedIn && <User size={16} strokeWidth={1.5} className="text-slate-500 dark:text-slate-400" />}
               {signedIn ? currentUser.name?.split(' ')[0] || 'Profile' : 'Sign in'}
+              {isPro(currentUser) && (
+                <span className="font-mono text-[11px] leading-none px-1.5 py-1 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400">Pro</span>
+              )}
             </button>
 
             <button
@@ -184,6 +192,7 @@ export default function Navbar({
             >
               <User size={16} strokeWidth={1.5} />
             </button>
+            </>)}
 
           </div>
         </div>

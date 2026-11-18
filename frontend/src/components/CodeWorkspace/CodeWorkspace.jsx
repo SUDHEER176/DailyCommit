@@ -29,6 +29,9 @@ import { runSolution, warmUpPython } from '../../services/execution';
 import { decodeEntities } from '../../services/execution/testCases';
 import { clearlyOtherLanguage } from '../../services/execution/languageCheck';
 import { api } from '../../services/api';
+import { useAttemptTracker } from './useAttemptTracker';
+import NextUpCard, { useNextProblem } from '../practice/NextUpCard';
+import AiReviewPanel from './AiReviewPanel';
 
 const SUPPORTED_LANGUAGES = [
   { id: 'javascript', label: 'JavaScript (Node.js)', monacoLang: 'javascript' },
@@ -116,7 +119,8 @@ function getProblemSlug(prob) {
 export default function CodeWorkspace({
   problem: initialProblem,
   onBack,
-  onProblemSolved
+  onProblemSolved,
+  onOpenProblem // optional: open another problem; enables the "Next up" suggestion after a solve
 }) {
   const [problem, setProblem] = useState(() => getProblemDetails(initialProblem));
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -132,6 +136,20 @@ export default function CodeWorkspace({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fontSize, setFontSize] = useState(14);
   const [runStatus, setRunStatus] = useState(null); // e.g. "Loading Python" while the interpreter downloads
+  const attempt = useAttemptTracker(problem);
+
+  // After an accepted submit (and again after a self-rating), suggest what to solve next.
+  // Bumped only once the attempt is saved, so the suggestion reflects it.
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const bumpHistory = () => setHistoryVersion((v) => v + 1);
+  // Counts accepted submits; a new one clears the previous code review
+  const [acceptedCount, setAcceptedCount] = useState(0);
+  useEffect(() => { setHistoryVersion(0); }, [problem?.id]);
+  const next = useNextProblem({
+    after: problem?.id,
+    refreshKey: historyVersion,
+    enabled: Boolean(onOpenProblem) && historyVersion > 0,
+  });
 
   // Python loads about 10 MB the first time, so start as soon as it's picked
   useEffect(() => {
@@ -247,6 +265,7 @@ export default function CodeWorkspace({
   const handleRunCode = async () => {
     if (!problem || isRunning || isSubmitting) return;
     setIsRunning(true);
+    attempt.recordRun(language);
     setBottomTab('result');
 
     try {
@@ -291,6 +310,8 @@ export default function CodeWorkspace({
         type: 'submit',
         ...res
       });
+      attempt.recordSubmit(language, res).then(() => { if (res.success) bumpHistory(); });
+      if (res.success) setAcceptedCount((c) => c + 1);
 
       if (res.success) {
         // Trigger celebratory confetti
@@ -307,6 +328,7 @@ export default function CodeWorkspace({
         }
       }
     } catch (err) {
+      attempt.recordSubmit(language, { success: false, verdict: 'Execution Error' });
       setExecutionResult({
         type: 'submit',
         success: false,
@@ -389,7 +411,7 @@ export default function CodeWorkspace({
                 <button onClick={() => setActiveTab('description')} className={tabClass(activeTab === 'description')}>
                   Description
                 </button>
-                <button onClick={() => setActiveTab('solution')} className={tabClass(activeTab === 'solution')}>
+                <button onClick={() => { setActiveTab('solution'); attempt.markHintsViewed(); }} className={tabClass(activeTab === 'solution')}>
                   Hints and topics
                 </button>
                 {isLoadingDetails && (
@@ -471,6 +493,7 @@ export default function CodeWorkspace({
                         href={problem.video}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={attempt.markVideoOpened}
                         className="mt-6 inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-ink-800 border border-white/[0.08] hover:border-white/[0.14] text-[13px] text-white transition-colors"
                       >
                         Watch the NeetCode explanation
@@ -521,6 +544,13 @@ export default function CodeWorkspace({
                       language={SUPPORTED_LANGUAGES.find((l) => l.id === language)?.monacoLang || 'javascript'}
                       theme="daily-commit"
                       beforeMount={defineEditorTheme}
+                      onMount={(editor) => {
+                        // Pasted characters are a signal: a pasted solution says little about skill
+                        editor.onDidPaste((e) => {
+                          const model = editor.getModel();
+                          if (model && e.range) attempt.recordPaste(model.getValueLengthInRange(e.range));
+                        });
+                      }}
                       value={code}
                       onChange={handleCodeChange}
                       options={{
@@ -643,6 +673,45 @@ export default function CodeWorkspace({
                               <div className="mt-2 text-xs text-slate-500">Runtime</div>
                             </div>
                           </div>
+
+                          {executionResult.type === 'submit' && executionResult.success && (
+                            <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="How hard was this problem for you">
+                              <span className="text-[13px] text-slate-400">How did that feel?</span>
+                              {[['easy', 'Easy'], ['ok', 'OK'], ['hard', 'Hard']].map(([value, label]) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  aria-pressed={attempt.selfRating === value}
+                                  onClick={() => attempt.setSelfRating(value).then(bumpHistory)}
+                                  className={`h-7 px-3 rounded-lg text-[13px] border transition-colors ${
+                                    attempt.selfRating === value
+                                      ? 'bg-white/[0.08] border-white/[0.16] text-white'
+                                      : 'border-white/[0.08] text-slate-400 hover:text-white hover:border-white/[0.14]'
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                              {attempt.selfRating && <span className="text-xs text-slate-500">Saved</span>}
+                            </div>
+                          )}
+
+                          {executionResult.type === 'submit' && executionResult.success && (
+                            <AiReviewPanel
+                              problem={problem}
+                              language={language}
+                              code={code}
+                              submitKey={acceptedCount}
+                              attemptId={attempt.getAttemptId()}
+                              onVerdict={(verdict) => attempt.recordAiVerdict(verdict).then(bumpHistory)}
+                            />
+                          )}
+
+                          {executionResult.type === 'submit' && executionResult.success && onOpenProblem && (
+                            <div className="mt-4">
+                              <NextUpCard compact rec={next.rec} loading={next.loading} onOpen={onOpenProblem} onSkip={next.skip} />
+                            </div>
+                          )}
 
                           <div className="mt-4 flex flex-wrap gap-1" aria-label={`${passedCount} of ${results.length} cases passed`}>
                             {results.map((r, i) => (

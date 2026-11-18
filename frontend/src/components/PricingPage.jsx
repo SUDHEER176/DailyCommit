@@ -20,8 +20,9 @@ const FREE_FEATURES = [
 // Pro features not built yet are marked, so nobody pays for something that is not there
 const PRO_FEATURES = [
   { text: 'Everything in Free' },
+  { text: 'AI code review after each solve: time and space complexity, whether it’s optimal, one tip' },
   { text: 'Company-wise sheets: Amazon, Google, Microsoft and more', soon: true },
-  { text: 'Smart revision: problems you needed help on come back sooner', soon: true },
+  { text: 'Smart revision: problems you struggled with come back sooner, ones you know well wait longer' },
   { text: 'Mock interview mode: 2 problems in 45 minutes, scored', soon: true },
   { text: 'Detailed analytics: weak topics and on-track check for your date', soon: true },
   { text: 'Morning email with the day’s plan and revisions', soon: true },
@@ -66,6 +67,16 @@ export default function PricingPage({ currentUser, onOpenAuthModal, onUserUpdate
     api.getBillingPlans().then(setBilling);
   }, []);
 
+  // The signed-in person's payments; reloaded after a successful payment
+  const [history, setHistory] = useState(null);
+  const [historyVersion, setHistoryVersion] = useState(0);
+  useEffect(() => {
+    if (!currentUser?.isAuthenticated) { setHistory(null); return undefined; }
+    let alive = true;
+    api.getBillingHistory().then((h) => { if (alive) setHistory(h); });
+    return () => { alive = false; };
+  }, [currentUser?.isAuthenticated, historyVersion]);
+
   const plans = billing?.plans?.length ? billing.plans : FALLBACK_PLANS;
   const monthly = plans.find((p) => p.id === 'pro_monthly');
   const yearly = plans.find((p) => p.id === 'pro_yearly');
@@ -106,6 +117,7 @@ export default function PricingPage({ currentUser, onOpenAuthModal, onUserUpdate
           setBusy(false);
           if (done.success) {
             onUserUpdate && onUserUpdate(done.data);
+            setHistoryVersion((v) => v + 1);
             setSuccess(`You’re on Pro until ${longDate(done.data.proUntil)}`);
           } else {
             setError(done.error);
@@ -128,6 +140,9 @@ export default function PricingPage({ currentUser, onOpenAuthModal, onUserUpdate
   if (!signedIn) cta = 'Sign in to upgrade';
   else if (isPro) cta = `Add ${cycle === 'yearly' ? 'a year' : 'a month'} for ${inr(chosen.amount)}`;
   if (busy) cta = 'Opening checkout';
+  // Testing mode: every Pro feature is already free and checkout is off
+  const testingMode = Boolean(billing?.testingMode);
+  if (testingMode) cta = 'Free in testing mode';
 
   return (
     <div className="pt-8 sm:pt-16 pb-24 text-slate-900 dark:text-white animate-fadeIn">
@@ -218,7 +233,7 @@ export default function PricingPage({ currentUser, onOpenAuthModal, onUserUpdate
             <button
               type="button"
               onClick={upgrade}
-              disabled={busy || (signedIn && !enabled)}
+              disabled={testingMode || busy || (signedIn && !enabled)}
               className="btn-primary-glow w-full h-10 rounded-[10px] text-sm font-medium inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-60 active:scale-[0.98]"
             >
               {busy && <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} />}
@@ -226,7 +241,10 @@ export default function PricingPage({ currentUser, onOpenAuthModal, onUserUpdate
             </button>
 
             <div className="mt-3 min-h-[20px] text-[13px]" aria-live="polite">
-              {error && <p role="alert" className="text-rose-600 dark:text-rose-400">{error}</p>}
+              {testingMode && (
+                <p className="text-slate-500">Testing mode: every Pro feature is already on for free, so there’s nothing to buy. Payments are off.</p>
+              )}
+              {!testingMode && error && <p role="alert" className="text-rose-600 dark:text-rose-400">{error}</p>}
               {!error && success && <p className="text-emerald-600 dark:text-emerald-400">{success}</p>}
               {!error && !success && signedIn && billing && !enabled && (
                 <p className="text-slate-500">
@@ -245,6 +263,30 @@ export default function PricingPage({ currentUser, onOpenAuthModal, onUserUpdate
           </div>
         </section>
       </div>
+
+      {/* The signed-in person's payments */}
+      {history?.payments?.length > 0 && (
+        <div className="mt-16 sm:mt-24 grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div>
+            <h2 className="text-[22px] font-medium">Your payments</h2>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              {history.plan === 'pro' && history.proUntil ? `Pro until ${longDate(history.proUntil)}` : 'You’re on Free'}
+            </p>
+          </div>
+          <ul className="divide-y divide-slate-200 dark:divide-white/[0.08] border-y border-slate-200 dark:border-white/[0.08]">
+            {history.payments.map((p) => (
+              <li key={p.orderId} className="py-4 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 text-sm">
+                <span className="text-slate-900 dark:text-white">{p.planName}</span>
+                <span className="text-slate-500 tabular-nums">{longDate(p.paidAt || p.createdAt)}</span>
+                <span className="tabular-nums text-slate-900 dark:text-white">{inr(p.amount)}</span>
+                <span className={p.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}>
+                  {p.status === 'paid' ? 'Paid' : p.status === 'refunded' ? 'Refunded' : 'Not completed'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Questions */}
       <div className="mt-16 sm:mt-24 grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
