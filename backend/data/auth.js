@@ -41,6 +41,14 @@ export async function deleteSession(token) {
   await query('DELETE FROM sessions WHERE token_hash = $1', [h]);
 }
 
+/** Sign a person out everywhere: delete all their sessions, including ones held in the cache */
+export async function deleteUserSessions(userId) {
+  await query('DELETE FROM sessions WHERE user_id = $1', [userId]);
+  for (const [hash, session] of sessionCache) {
+    if (session.userId === userId) sessionCache.delete(hash);
+  }
+}
+
 async function lookupSession(token) {
   const h = hashToken(token);
   const cached = sessionCache.get(h);

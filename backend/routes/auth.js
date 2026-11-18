@@ -1,10 +1,11 @@
 import express from 'express';
 import { hasDatabase, query } from '../data/neon.js';
-import { loadUserData, seedUserData, updateUserProfile } from '../data/store.js';
-import { sendVerificationCode, mailConfigured } from '../data/mailer.js';
+import { APP_MODE } from '../data/app-mode.js';
+import { loadUserData, seedUserData, updateUserProfile, forgetUserData } from '../data/store.js';
+import { sendVerificationCode, sendPasswordResetCode, mailConfigured } from '../data/mailer.js';
 import { proStatus } from '../data/billing.js';
 import {
-  requireUser, bearerToken, createSession, deleteSession,
+  requireUser, bearerToken, createSession, deleteSession, deleteUserSessions,
   hashPassword, checkPassword, normalizeEmail, isValidEmail,
   verifyGoogleCredential, googleClientId,
   issueCode, checkCode,
@@ -48,21 +49,22 @@ async function hasData(userId) {
   return rows[0].has;
 }
 
-/** Issue and email a code. Returns { retryAfter } or throws with a status */
-async function sendCode(user) {
-  const issued = await issueCode(user.email, 'verify');
+/** Issue and email a code ('verify' for sign-up, 'reset' for a forgotten password). Returns { retryAfter } or throws with a status */
+async function sendCode(user, purpose = 'verify') {
+  const reset = purpose === 'reset';
+  const issued = await issueCode(user.email, purpose);
   if (issued.error) return { retryAfter: issued.retryAfter, throttled: issued.error };
   try {
-    await sendVerificationCode({ to: user.email, name: user.name, code: issued.code });
+    await (reset ? sendPasswordResetCode : sendVerificationCode)({ to: user.email, name: user.name, code: issued.code });
   } catch (err) {
-    console.error(`[mail] could not send verification code to ${user.email}: ${err.message}`);
+    console.error(`[mail] could not send ${reset ? 'password reset' : 'verification'} code to ${user.email}: ${err.message}`);
     if (process.env.NODE_ENV !== 'production') {
       // Local development: keep the code and print it, so sign-up can still be tested
-      console.log(`\n[mail] (dev only) Verification code for ${user.email}: ${issued.code}\n`);
+      console.log(`\n[mail] (dev only) ${reset ? 'Password reset' : 'Verification'} code for ${user.email}: ${issued.code}\n`);
       return { retryAfter: issued.retryAfter, throttled: 'The email could not be sent. In development the code is printed in the backend console' };
     }
     // Forget the code so a retry is not blocked by the resend cooldown
-    await query('DELETE FROM email_codes WHERE email = $1 AND purpose = $2', [user.email, 'verify']).catch(() => {});
+    await query('DELETE FROM email_codes WHERE email = $1 AND purpose = $2', [user.email, purpose]).catch(() => {});
     const sandbox = /resend\.dev|testing|own email|verify a domain/i.test(err.message);
     throw Object.assign(
       new Error(sandbox
@@ -82,7 +84,7 @@ const pending = (res, email, sent, status = 202) =>
 
 /** GET /api/auth/config: tells the frontend which sign-in methods are available */
 router.get('/config', (req, res) => {
-  res.json({ success: true, data: { accounts: hasDatabase, googleClientId, emailDelivery: mailConfigured } });
+  res.json({ success: true, data: { mode: APP_MODE, accounts: hasDatabase, googleClientId, emailDelivery: mailConfigured } });
 });
 
 /** POST /api/auth/register { name, email, password } → emails a code, no session yet */
@@ -210,6 +212,73 @@ router.post('/login', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/auth/forgot-password { email }
+ * Emails a reset code when there is a verified account for that address. The answer is the same
+ * whether or not there is one, so this can't be used to find out who has an account.
+ */
+router.post('/forgot-password', async (req, res) => {
+  if (!hasDatabase) return accountsOff(res);
+  const email = normalizeEmail(req.body.email);
+  if (!isValidEmail(email)) return res.status(400).json({ success: false, error: 'Enter a valid email address' });
+  const limitKey = `forgot|${req.ip}`;
+  const reply = (retryAfter = 60) => res.json({ success: true, data: { email, retryAfter } });
+  try {
+    if (tooManyAttempts(limitKey)) {
+      return res.status(429).json({ success: false, error: 'Too many requests. Try again in 15 minutes' });
+    }
+    recordFailure(limitKey); // every request counts: 10 per 15 minutes per address
+    const { rows } = await query('SELECT * FROM users WHERE email = $1 AND email_verified', [email]);
+    if (!rows[0]) return reply();
+    try {
+      const sent = await sendCode(rows[0], 'reset');
+      return reply(sent.retryAfter);
+    } catch (err) {
+      // Telling the person the email failed would also tell anyone that this account exists
+      console.error('[auth] password reset email failed:', err.message);
+      return reply();
+    }
+  } catch (err) {
+    console.error('[auth] forgot-password failed:', err.message);
+    res.status(500).json({ success: false, error: 'Could not start the reset. Try again' });
+  }
+});
+
+/**
+ * POST /api/auth/reset-password { email, code, password }
+ * Sets a new password with the emailed code, signs the person out everywhere else, and signs
+ * them in here. Also works for a Google-only account, which gets a password this way.
+ */
+router.post('/reset-password', async (req, res) => {
+  if (!hasDatabase) return accountsOff(res);
+  const email = normalizeEmail(req.body.email);
+  const password = String(req.body.password || '');
+  const limitKey = `reset|${req.ip}|${email}`;
+  try {
+    if (tooManyAttempts(limitKey)) {
+      return res.status(429).json({ success: false, error: 'Too many attempts. Try again in 15 minutes' });
+    }
+    // Checked before the code, so a too-short password doesn't use up the code
+    if (password.length < 8) return res.status(400).json({ success: false, error: 'Use at least 8 characters for your password' });
+
+    const { rows } = await query('SELECT * FROM users WHERE email = $1 AND email_verified', [email]);
+    const result = await checkCode(email, 'reset', req.body.code);
+    if (!rows[0] || !result.ok) {
+      recordFailure(limitKey);
+      return res.status(400).json({ success: false, error: result.ok ? 'Ask for a new code' : result.error });
+    }
+    clearFailures(limitKey);
+
+    const hash = await hashPassword(password);
+    const { rows: [user] } = await query('UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING *', [hash, rows[0].id]);
+    await deleteUserSessions(user.id); // anyone who had the old password is signed out
+    await signedIn(res, user);
+  } catch (err) {
+    console.error('[auth] reset-password failed:', err.message);
+    res.status(500).json({ success: false, error: 'Could not reset your password. Try again' });
+  }
+});
+
 /** POST /api/auth/google { credential }: Google has already verified the email */
 router.post('/google', async (req, res) => {
   if (!hasDatabase) return accountsOff(res);
@@ -262,6 +331,80 @@ router.get('/me', requireUser, async (req, res) => {
     res.json({ success: true, data: await publicUser(rows[0]) });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Could not load your profile' });
+  }
+});
+
+/** GET /api/auth/me/export: everything stored about the signed-in person, as JSON */
+router.get('/me/export', requireUser, async (req, res) => {
+  if (!hasDatabase) return accountsOff(res);
+  try {
+    const { rows: [user] } = await query('SELECT * FROM users WHERE id = $1', [req.userId]);
+    if (!user) return res.status(401).json({ success: false, error: 'Sign in to continue' });
+    const { rows: payments } = await query(
+      'SELECT order_id, plan_id, amount, currency, status, created_at, paid_at FROM payments WHERE user_id = $1 ORDER BY created_at',
+      [req.userId]
+    );
+    res.json({
+      success: true,
+      data: {
+        exportedAt: new Date().toISOString(),
+        profile: {
+          name: user.name, email: user.email, createdAt: user.created_at, emailVerified: Boolean(user.email_verified),
+          signInMethods: [user.password_hash && 'email and password', user.google_sub && 'Google'].filter(Boolean),
+          ...proStatus(user),
+        },
+        payments,
+        // The plan, solved problems, attempts, reviews, tasks and everything else saved for this account
+        data: await loadUserData(req.userId),
+      },
+    });
+  } catch (err) {
+    console.error('[auth] export failed:', err.message);
+    res.status(500).json({ success: false, error: 'Could not export your data' });
+  }
+});
+
+/**
+ * DELETE /api/auth/me { password } (or { confirm: <your email> } for a Google-only account)
+ * Deletes the account: signs out everywhere, erases the saved plan, attempts and profile, and
+ * removes the name, email and sign-in links. Payment records stay (the business needs them for its
+ * accounts) but are no longer tied to any personal details. Pro ends with the account.
+ */
+router.delete('/me', requireUser, async (req, res) => {
+  if (!hasDatabase) return accountsOff(res);
+  const limitKey = `delete|${req.userId}`;
+  try {
+    if (tooManyAttempts(limitKey)) {
+      return res.status(429).json({ success: false, error: 'Too many attempts. Try again in 15 minutes' });
+    }
+    const { rows: [user] } = await query('SELECT * FROM users WHERE id = $1', [req.userId]);
+    if (!user) return res.status(401).json({ success: false, error: 'Sign in to continue' });
+
+    // Make sure it is really the account owner: their password, or their email typed out
+    if (user.password_hash) {
+      if (!(await checkPassword(String(req.body?.password || ''), user.password_hash))) {
+        recordFailure(limitKey);
+        return res.status(400).json({ success: false, error: 'That password is not right' });
+      }
+    } else if (normalizeEmail(req.body?.confirm) !== user.email) {
+      return res.status(400).json({ success: false, error: 'Type your email address to confirm' });
+    }
+    clearFailures(limitKey);
+
+    await deleteUserSessions(user.id);   // no new requests as this person
+    await forgetUserData(user.id);        // and no late save can bring the data back
+    await query('DELETE FROM user_state WHERE user_id = $1', [user.id]);
+    await query('DELETE FROM email_codes WHERE email = $1', [user.email]);
+    await query(
+      `UPDATE users SET email = $2, name = 'Deleted account', password_hash = NULL, google_sub = NULL, avatar_url = NULL,
+         plan_expires_at = NULL, email_verified = false, email_verified_at = NULL
+       WHERE id = $1`,
+      [user.id, `deleted-${user.id}@deleted.invalid`]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[auth] delete account failed:', err.message);
+    res.status(500).json({ success: false, error: 'Could not delete your account. Try again' });
   }
 });
 

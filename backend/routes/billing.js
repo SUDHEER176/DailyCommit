@@ -1,12 +1,14 @@
 import express from 'express';
 import { hasDatabase, query } from '../data/neon.js';
+import { isTesting } from '../data/app-mode.js';
 import { requireUser } from '../data/auth.js';
 import {
   razorpayConfigured, razorpayKeyId, razorpayTestMode, webhookConfigured, publicPlans,
-  createOrder, checkPaymentSignature, checkWebhookSignature, activateOrder, proStatus,
+  createOrder, checkPaymentSignature, checkWebhookSignature, activateOrder, applyRefund, proStatus,
 } from '../data/billing.js';
 
 const router = express.Router();
+const PLAN_NAMES = Object.fromEntries(publicPlans().map((p) => [p.id, p.name]));
 const paymentsOn = () => hasDatabase && razorpayConfigured;
 const paymentsOff = (res) =>
   res.status(503).json({ success: false, error: 'Payments are not set up yet. Add the Razorpay keys to backend/.env' });
@@ -15,8 +17,43 @@ const paymentsOff = (res) =>
 router.get('/plans', (req, res) => {
   res.json({
     success: true,
-    data: { plans: publicPlans(), enabled: paymentsOn(), testMode: razorpayTestMode, keyId: paymentsOn() ? razorpayKeyId : null },
+    // testingMode: the whole app is in testing mode, where every Pro feature is free and checkout is off
+    data: { plans: publicPlans(), enabled: paymentsOn(), testMode: razorpayTestMode, testingMode: isTesting, keyId: paymentsOn() ? razorpayKeyId : null },
   });
+});
+
+/** GET /api/billing/history: the signed-in person's payments, newest first, plus their Pro status */
+router.get('/history', requireUser, async (req, res) => {
+  if (!hasDatabase) return res.json({ success: true, data: { payments: [], plan: 'free', proUntil: null } });
+  try {
+    const [{ rows: payments }, { rows: users }] = await Promise.all([
+      query(
+        `SELECT order_id, plan_id, amount, currency, status, created_at, paid_at
+           FROM payments WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+        [req.userId]
+      ),
+      query('SELECT plan_expires_at FROM users WHERE id = $1', [req.userId]),
+    ]);
+    res.json({
+      success: true,
+      data: {
+        ...proStatus(users[0]),
+        payments: payments.map((p) => ({
+          orderId: p.order_id,
+          planId: p.plan_id,
+          planName: PLAN_NAMES[p.plan_id] || p.plan_id,
+          amount: p.amount,
+          currency: p.currency,
+          status: p.status, // 'paid', or 'created' when checkout was opened but not completed
+          createdAt: p.created_at,
+          paidAt: p.paid_at,
+        })),
+      },
+    });
+  } catch (err) {
+    console.error('[billing] history failed:', err.message);
+    res.status(500).json({ success: false, error: 'Could not load your payments' });
+  }
 });
 
 /** POST /api/billing/order { planId } → a Razorpay order for checkout */
@@ -77,6 +114,12 @@ export async function webhookHandler(req, res) {
       if (payment?.order_id && payment?.id) {
         await activateOrder(payment.order_id, payment.id, { amount: payment.amount });
       }
+    } else if (event.event === 'refund.processed') {
+      // payload.refund.entity is this refund; payload.payment.entity carries the running total refunded
+      const refund = event.payload?.refund?.entity;
+      const payment = event.payload?.payment?.entity;
+      const paymentId = refund?.payment_id || payment?.id;
+      if (paymentId) await applyRefund(paymentId, payment?.amount_refunded ?? refund?.amount ?? 0);
     }
     res.json({ ok: true });
   } catch (err) {
