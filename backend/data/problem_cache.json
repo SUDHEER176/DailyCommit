@@ -307,7 +307,7 @@
     "starterTemplates": {
       "cpp": "class Solution {\npublic:\n    bool containsDuplicate(vector<int>& nums) {\n        \n    }\n};",
       "java": "class Solution {\n    public boolean containsDuplicate(int[] nums) {\n        \n    }\n}",
-      "python": "class Solution(object):\n    def containsDuplicate(self, nums):\n        \"\"\"\n        :type nums: List[int]\n        :rtype: bool\n        \"\"\"\n        ",
+      "python": "class Solution:\n    def containsDuplicate(self, nums: list[int]) -> bool:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @return {boolean}\n */\nvar containsDuplicate = function(nums) {\n    \n};"
     },
     "examples": [],
@@ -318,11 +318,43 @@
     "sampleTestCases": [
       {
         "id": 1,
-        "input": "[1,2,3,1]",
-        "expected": "Expected output"
+        "input": "nums = [1,2,3,1]",
+        "args": [
+          "[1,2,3,1]"
+        ],
+        "expected": "true"
+      },
+      {
+        "id": 2,
+        "input": "nums = [1,2,3,4]",
+        "args": [
+          "[1,2,3,4]"
+        ],
+        "expected": "false"
+      },
+      {
+        "id": 3,
+        "input": "nums = [1,1,1,3,3,4,3,2,4,2]",
+        "args": [
+          "[1,1,1,3,3,4,3,2,4,2]"
+        ],
+        "expected": "true"
       }
     ],
-    "hiddenTestCases": []
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "containsDuplicate",
+      "params": [
+        {
+          "name": "nums",
+          "type": "integer[]"
+        }
+      ],
+      "return": {
+        "type": "boolean"
+      }
+    },
+    "cacheVersion": 3
   },
   "two-sum": {
     "id": "nc-1",
