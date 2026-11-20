@@ -144,7 +144,13 @@ export default function CodeWorkspace({
   const bumpHistory = () => setHistoryVersion((v) => v + 1);
   // Counts accepted submits; a new one clears the previous code review
   const [acceptedCount, setAcceptedCount] = useState(0);
-  useEffect(() => { setHistoryVersion(0); }, [problem?.id]);
+  // The "Stuck? Suggest an easier problem" card, opened by the person after a Run or Submit that failed
+  const [stuckOpen, setStuckOpen] = useState(false);
+  useEffect(() => { setHistoryVersion(0); setStuckOpen(false); }, [problem?.id]);
+  const askForEasier = () => {
+    setStuckOpen(true);
+    attempt.markGaveUp().then(bumpHistory);
+  };
   const next = useNextProblem({
     after: problem?.id,
     refreshKey: historyVersion,
@@ -710,6 +716,23 @@ export default function CodeWorkspace({
                           {executionResult.type === 'submit' && executionResult.success && onOpenProblem && (
                             <div className="mt-4">
                               <NextUpCard compact rec={next.rec} loading={next.loading} onOpen={onOpenProblem} onSkip={next.skip} />
+                            </div>
+                          )}
+
+                          {/* Couldn't get it? Say so and get an easier problem to build up with */}
+                          {!executionResult.success && onOpenProblem && (
+                            <div className="mt-4">
+                              {stuckOpen ? (
+                                <NextUpCard compact rec={next.rec} loading={next.loading} onOpen={onOpenProblem} onSkip={next.skip} />
+                              ) : (
+                                <p className="text-[13px] text-slate-400">
+                                  Stuck on this one?{' '}
+                                  <button type="button" onClick={askForEasier}
+                                    className="text-white underline underline-offset-4 decoration-white/30 hover:decoration-white rounded-sm">
+                                    Suggest an easier problem
+                                  </button>
+                                </p>
+                              )}
                             </div>
                           )}
 

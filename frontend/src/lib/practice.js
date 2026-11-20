@@ -106,9 +106,9 @@ export function revisionSchedule(plan, today = new Date(), extra = {}) {
     const reviews = extra.attemptReviews?.[problemId]?.reviews || [];
     const first = (Array.isArray(list) ? list : []).slice()
       .sort((a, b) => Date.parse(a.solvedAt || a.lastActiveAt || a.openedAt || 0) - Date.parse(b.solvedAt || b.lastActiveAt || b.openedAt || 0))
-      .find((a) => a.solved || a.submits || a.runs);
+      .find((a) => a.solved || a.submits || a.runs || a.gaveUp);
     const perf = first ? attemptPerformance(first, problem.difficulty) : null;
-    const struggled = perf != null && (perf.performance < 0.5 || first.selfRating === 'hard') && Boolean(first.solved || first.submits);
+    const struggled = perf != null && (perf.performance < 0.5 || first.selfRating === 'hard') && Boolean(first.solved || first.submits || first.gaveUp);
     if (!struggled && reviews.length === 0) return;
     const anchorIso = first?.solvedAt || first?.lastActiveAt;
     if (!anchorIso) return;
@@ -123,7 +123,7 @@ export function revisionSchedule(plan, today = new Date(), extra = {}) {
       reviewDay: REVIEW_DAYS[reviews.length],
       dueDate,
       daysUntil: offset,
-      reason: first.solved ? 'Struggled with it' : 'Not solved yet',
+      reason: first.solved ? 'Struggled with it' : first.gaveUp ? 'You got stuck' : 'Not solved yet',
     };
     (offset <= 0 ? due : upcoming).push(item);
   });

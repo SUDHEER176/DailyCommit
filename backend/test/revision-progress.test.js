@@ -85,6 +85,17 @@ test('progress detail: per-topic rows, weak topics, and the on-track check again
   assert.equal(p.detailed.onTrack.planEnds, '2026-11-20');
 });
 
+test('a problem the person gave up on, with runs but no submit, comes back as "You got stuck"', () => {
+  const attempts = { 'nc-128': [{ id: 's', problemId: 'nc-128', solved: false, runs: 2, submits: 0, gaveUp: true, lastActiveAt: SOLVED }] };
+  const { due, upcoming } = smartRevisionSchedule(null, attempts, ymd(3), 0, { problems: PROBLEMS });
+  const items = [...due, ...upcoming];
+  assert.deepEqual(items.map((i) => i.question.id), ['nc-128']);
+  assert.equal(items[0].reason, 'You got stuck');
+  const quiet = { 'nc-128': [{ id: 'q', problemId: 'nc-128', solved: false, runs: 2, submits: 0, lastActiveAt: SOLVED }] };
+  const none = smartRevisionSchedule(null, quiet, ymd(3), 0, { problems: PROBLEMS });
+  assert.equal(none.due.length + none.upcoming.length, 0, 'poking at it without saying stuck or submitting is not enough');
+});
+
 test('rating a problem Hard puts it on the queue even when the numbers look fine', () => {
   const attempts = { 'nc-217': [solvedTry('nc-217', { secondsToSolve: 100, selfRating: 'hard' })] };
   const { due, upcoming } = smartRevisionSchedule(null, attempts, ymd(5), 0, { problems: PROBLEMS });

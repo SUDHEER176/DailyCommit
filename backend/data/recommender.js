@@ -36,7 +36,11 @@ const expectedScore = (skill, problemRating) => 1 / (1 + 10 ** ((problemRating -
 export function attemptPerformance(attempt, difficulty) {
   if (!attempt) return null;
   if (!attempt.solved) {
+    // The person said they're stuck ("Suggest an easier problem"): believe them, in full
+    if (attempt.gaveUp) return { performance: 0.1, weight: 1 };
     if (!attempt.submits && !attempt.runs) return null;
+    // Opened it, ran the sample once and left within a couple of minutes: just looking, not struggling
+    if (!attempt.submits && attempt.runs <= 1 && (attempt.activeSeconds || 0) < 120) return null;
     // Tried and didn't get there (yet). Counts, but less, since they may come back to it.
     return { performance: attempt.submits ? 0.1 : 0.2, weight: 0.6 };
   }
@@ -144,7 +148,7 @@ function lastWorkedOn(attempts, completed) {
   let best = null;
   Object.entries(attempts).forEach(([problemId, list]) => {
     (Array.isArray(list) ? list : []).forEach((a) => {
-      if (!a.solved && !a.submits && !a.runs) return;
+      if (!a.solved && !a.submits && !a.runs && !a.gaveUp) return;
       const t = timeOf(a);
       if (!best || t > best.t) best = { problemId, t };
     });
