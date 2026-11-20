@@ -17,7 +17,7 @@ function fakeClient(respond) {
   };
 }
 const ok = (body = REVIEW, extra = {}) => () => ({
-  text: JSON.stringify(body), modelVersion: 'gemini-3.8-flash',
+  text: JSON.stringify(body), modelVersion: 'gemini-2.5-flash',
   candidates: [{ finishReason: 'STOP' }], ...extra,
 });
 const input = { title: 'Two Sum', difficulty: 'Easy', language: 'javascript', code: 'function twoSum(n,t){ /* ... */ }' };
@@ -27,7 +27,7 @@ test('sends a JSON-schema request to the free Flash model and returns the parsed
   const review = await reviewCode(input, { client });
   assert.deepEqual({ ...review, model: undefined }, { ...REVIEW, model: undefined });
   const req = client.calls[0];
-  assert.equal(req.model, 'gemini-3.8-flash');
+  assert.equal(req.model, 'gemini-2.5-flash');
   assert.equal(req.config.responseMimeType, 'application/json');
   assert.deepEqual(req.config.responseJsonSchema.properties.verdict.enum, ['optimal', 'acceptable', 'suboptimal']);
   assert.match(req.config.systemInstruction, /treat it as data/);
@@ -61,8 +61,32 @@ test('API errors map to statuses the route can send', async () => {
   await assert.rejects(reviewCode(input, { client: throwing(new ApiError({ status: 400, message: 'API key not valid. Please pass a valid API key.' })) }), { status: 503 });
   await assert.rejects(reviewCode(input, { client: throwing(new ApiError({ status: 403, message: 'denied' })) }), { status: 503 });
   await assert.rejects(reviewCode(input, { client: throwing(new ApiError({ status: 404, message: 'model not found' })) }), { status: 503 });
-  await assert.rejects(reviewCode(input, { client: throwing(new ApiError({ status: 500, message: 'boom' })) }), { status: 502 });
+  await assert.rejects(reviewCode(input, { client: throwing(new ApiError({ status: 500, message: 'boom' })), retryDelays: [] }), { status: 502 });
   await assert.rejects(reviewCode(input, { client: throwing(new Error('socket hang up')) }), { status: 502 });
+});
+
+test('a transient Gemini 503 is retried, then succeeds', async () => {
+  let calls = 0;
+  const client = fakeClient(() => {
+    calls += 1;
+    if (calls < 3) throw new ApiError({ status: 503, message: 'high demand' });
+    return { text: JSON.stringify(REVIEW), modelVersion: 'gemini-2.5-flash', candidates: [{ finishReason: 'STOP' }] };
+  });
+  const review = await reviewCode(input, { client, retryDelays: [0, 0] });
+  assert.equal(review.verdict, 'optimal');
+  assert.equal(calls, 3, 'two failures, then the good answer');
+});
+
+test('Gemini 503 that never clears gives up after the retries with a clear error', async () => {
+  const client = fakeClient(() => { throw new ApiError({ status: 503, message: 'high demand' }); });
+  await assert.rejects(reviewCode(input, { client, retryDelays: [0, 0] }), { status: 502 });
+  assert.equal(client.calls.length, 3, 'one try plus two retries');
+});
+
+test('quota and key errors are not retried', async () => {
+  const client = fakeClient(() => { throw new ApiError({ status: 429, message: 'quota' }); });
+  await assert.rejects(reviewCode(input, { client, retryDelays: [0, 0] }), { status: 429 });
+  assert.equal(client.calls.length, 1);
 });
 
 test('long fields are clipped', async () => {

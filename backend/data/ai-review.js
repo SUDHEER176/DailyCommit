@@ -48,17 +48,35 @@ const getClient = () => (defaultClient ||= new GoogleGenAI({ apiKey: GEMINI_API_
 /** An error carrying the HTTP status and message the route should send */
 const fail = (status, message) => Object.assign(new Error(message), { status });
 
+// Google answers 503 "high demand" in short spikes, and 500/504 now and then. Those are worth a
+// couple of quick retries; quota (429), key (401/403) and not-found (404) errors are not.
+const TRANSIENT = new Set([500, 502, 503, 504]);
+const DEFAULT_RETRY_DELAYS_MS = [800, 2500];
+
+async function generate(client, request, delays) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await client.models.generateContent(request);
+    } catch (err) {
+      const status = err instanceof ApiError ? err.status : null;
+      if (!TRANSIENT.has(status) || attempt >= delays.length) throw err;
+      console.warn(`[ai-review] Gemini ${status}, retrying (${attempt + 1} of ${delays.length})`);
+      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+    }
+  }
+}
+
 /**
  * Review one solution. `client` can be injected for tests.
  * @returns {Promise<{ timeComplexity, spaceComplexity, bestKnownTime, verdict, summary, tip, model }>}
  */
-export async function reviewCode({ title, difficulty, language, code }, { client = getClient(), model = aiReviewModel } = {}) {
+export async function reviewCode({ title, difficulty, language, code }, { client = getClient(), model = aiReviewModel, retryDelays = DEFAULT_RETRY_DELAYS_MS } = {}) {
   if (typeof code !== 'string' || !code.trim()) throw fail(400, 'No code to review');
   if (code.length > MAX_CODE_CHARS) throw fail(413, `This solution is too long to review (over ${MAX_CODE_CHARS.toLocaleString('en-US')} characters)`);
 
   let response;
   try {
-    response = await client.models.generateContent({
+    response = await generate(client, {
       model,
       contents: `Problem: ${String(title || 'Unknown').slice(0, 200)} (${String(difficulty || 'unknown difficulty').slice(0, 20)})\nLanguage: ${String(language || 'unknown').slice(0, 20)}\n\n<code>\n${code}\n</code>`,
       config: {
@@ -67,7 +85,7 @@ export async function reviewCode({ title, difficulty, language, code }, { client
         responseJsonSchema: REVIEW_SCHEMA,
         abortSignal: AbortSignal.timeout(60000),
       },
-    });
+    }, retryDelays);
   } catch (err) {
     const status = err instanceof ApiError ? err.status : null;
     if (status === 429) {

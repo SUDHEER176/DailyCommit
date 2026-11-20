@@ -68,7 +68,7 @@ node scripts/sync-recommender.mjs                            # after editing bac
 - **Refunds:** the `refund.processed` webhook calls `applyRefund`: a full refund marks the payment `refunded` and subtracts its days from `plan_expires_at` (never below now); partial refunds and repeats do nothing.
 - **CORS:** `CORS_ORIGINS` (comma-separated) restricts browser callers; unset allows any (production warns at startup).
 - The frontend API client answers 401 locally for signed-out visitors when the server has accounts on, instead of sending requests that would be refused (`refusedWithoutSignIn` in `services/api.js`).
-- **AI code review (Pro):** `backend/data/ai-review.js` calls Google Gemini (`@google/genai`, default `gemini-3.8-flash`, free tier) with a JSON-schema response (`responseMimeType` + `responseJsonSchema`). `routes/ai.js` guards it with `requireUser` + `requirePro` (`data/billing.js`) and a per-day cap, and writes the verdict onto the attempt. It's off without `GEMINI_API_KEY`. The UI is `CodeWorkspace/AiReviewPanel.jsx`.
+- **AI code review (Pro):** `backend/data/ai-review.js` calls Google Gemini (`@google/genai`, default `gemini-2.5-flash`, free tier) with a JSON-schema response (`responseMimeType` + `responseJsonSchema`). `routes/ai.js` guards it with `requireUser` + `requirePro` (`data/billing.js`) and a per-day cap, and writes the verdict onto the attempt. It's off without `GEMINI_API_KEY`. The UI is `CodeWorkspace/AiReviewPanel.jsx`.
 
 ### Duplicated logic to keep in sync
 
