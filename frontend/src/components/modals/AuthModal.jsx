@@ -49,11 +49,19 @@ const PANEL_COPY = {
     title: 'One step left',
     body: 'Confirm your email and today’s square fills in',
   },
+  forgot: {
+    title: 'Back in a minute',
+    body: 'We’ll email you a code to set a new password. Your plan and streak are untouched',
+  },
+  reset: {
+    title: 'Almost there',
+    body: 'Enter the code and pick a new password, and today’s square fills in',
+  },
 };
 
 function StreakPanel({ mode, codeLength }) {
   const copy = PANEL_COPY[mode] || PANEL_COPY.signin;
-  const todayLevel = mode === 'verify' ? Math.min(4, Math.ceil((codeLength / 6) * 4)) : 0;
+  const todayLevel = mode === 'verify' || mode === 'reset' ? Math.min(4, Math.ceil((codeLength / 6) * 4)) : 0;
   return (
     <aside className="hidden md:flex flex-col p-8 bg-ink-900 border-r border-white/[0.06]">
       <CodeStreakLogo size={20} textSize="text-[15px]" />
@@ -136,7 +144,7 @@ function CodeBoxes({ value, onChange, disabled }) {
 }
 
 export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout }) {
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup' | 'verify'
+  const [mode, setMode] = useState('signin'); // 'signin' | 'signup' | 'verify' | 'forgot' | 'reset'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -148,6 +156,10 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess,
   const [code, setCode] = useState('');
   const [retryIn, setRetryIn] = useState(0);
   const [notice, setNotice] = useState('');
+  // Signed-in account card: download my data, delete my account
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [exporting, setExporting] = useState(false);
   const googleButton = useRef(null);
   const googleCallback = useRef(null);
 
@@ -173,6 +185,8 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess,
     if (!isOpen) return;
     setError('');
     setPassword('');
+    setConfirmDelete(false);
+    setDeleteInput('');
     if (!config) api.getAuthConfig().then(setConfig);
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -216,7 +230,7 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess,
       })
       .catch((e) => !cancelled && setError(e.message));
     return () => { cancelled = true; };
-  }, [isOpen, signedIn, config, mode === 'verify']); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, signedIn, config, mode === 'signin' || mode === 'signup']); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close on Escape
   useEffect(() => {
@@ -266,6 +280,75 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess,
     if (res.pending) {
       setRetryIn(res.retryAfter || 60);
       setNotice(res.notice || 'A new code is on its way');
+      setCode('');
+    } else {
+      setError(res.error);
+    }
+  };
+
+  const downloadData = async () => {
+    setError('');
+    setExporting(true);
+    const res = await api.exportMyData();
+    setExporting(false);
+    if (!res.success) return setError(res.error);
+    const url = URL.createObjectURL(new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'daily-commit-data.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const deleteAccount = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    const res = await api.deleteAccount(currentUser.hasPassword ? { password: deleteInput } : { confirm: deleteInput });
+    setLoading(false);
+    if (!res.success) return setError(res.error);
+    onLogout && onLogout(); // the account is gone: clear it from the app too
+    onClose();
+  };
+
+  // Forgotten password: ask for a code, then set a new password with it
+  const submitForgot = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!email.trim()) return setError('Enter your email');
+    setLoading(true);
+    const res = await api.forgotPassword(email.trim());
+    setLoading(false);
+    if (!res.success) return setError(res.error);
+    setPendingEmail(res.email);
+    setRetryIn(res.retryAfter);
+    setNotice('');
+    setCode('');
+    setPassword('');
+    setMode('reset');
+  };
+
+  const submitReset = async (e) => {
+    e?.preventDefault();
+    setError('');
+    if (!/^\d{6}$/.test(code)) return setError('Enter the 6 digit code');
+    if (password.length < 8) return setError('Use at least 8 characters for your password');
+    setLoading(true);
+    const res = await api.resetPassword({ email: pendingEmail, code, password });
+    setLoading(false);
+    if (res.success) finish(res.user);
+    else setError(res.error);
+  };
+
+  const resendReset = async () => {
+    setError('');
+    setNotice('');
+    setLoading(true);
+    const res = await api.forgotPassword(pendingEmail);
+    setLoading(false);
+    if (res.success) {
+      setRetryIn(res.retryAfter);
+      setNotice('If that address has an account, a new code is on its way');
       setCode('');
     } else {
       setError(res.error);
@@ -333,6 +416,53 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess,
             <LogOut className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
             Sign out
           </button>
+
+          <p role="alert" aria-live="polite" className={`mt-4 text-[13px] text-rose-400 ${error ? '' : 'hidden'}`}>{error}</p>
+
+          {confirmDelete ? (
+            <form onSubmit={deleteAccount} className="mt-6 p-4 rounded-xl border border-rose-500/30 bg-rose-500/[0.05] space-y-3">
+              <p className="text-[13px] leading-5 text-slate-300">
+                This permanently deletes your plan, solved problems, streak and settings, and ends Pro.
+                Payment records are kept for accounting, without your name or email. This can’t be undone.
+              </p>
+              <div>
+                <label htmlFor="delete-confirm" className="block text-[13px] text-slate-300">
+                  {currentUser.hasPassword ? 'Your password' : 'Type your email address to confirm'}
+                </label>
+                <input
+                  id="delete-confirm"
+                  type={currentUser.hasPassword ? 'password' : 'email'}
+                  autoComplete={currentUser.hasPassword ? 'current-password' : 'off'}
+                  autoFocus
+                  value={deleteInput}
+                  onChange={(e) => setDeleteInput(e.target.value)}
+                  className={`mt-2 ${field}`}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { setConfirmDelete(false); setDeleteInput(''); setError(''); }}
+                  className="flex-1 h-9 rounded-[10px] bg-ink-800 border border-white/[0.08] hover:border-white/[0.14] text-[13px] text-white transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={loading || !deleteInput}
+                  className="flex-1 h-9 rounded-[10px] bg-rose-600 hover:bg-rose-500 text-[13px] font-medium text-white transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2">
+                  {loading && <Spinner size={14} label="Deleting" />}
+                  {loading ? 'Deleting' : 'Delete my account'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between gap-3 text-[13px]">
+              <button type="button" onClick={downloadData} disabled={exporting}
+                className="text-slate-400 hover:text-white underline underline-offset-4 decoration-white/30 hover:decoration-white disabled:opacity-50 rounded-sm">
+                {exporting ? 'Preparing' : 'Download my data'}
+              </button>
+              <button type="button" onClick={() => setConfirmDelete(true)}
+                className="text-slate-500 hover:text-rose-400 underline underline-offset-4 decoration-white/20 hover:decoration-rose-400 rounded-sm">
+                Delete account
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -407,6 +537,108 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess,
                 </button>
               </p>
             </>
+          ) : mode === 'forgot' ? (
+            <>
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className="mt-6 -ml-1 h-8 px-1 inline-flex items-center gap-2 rounded-md text-[13px] text-slate-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                Back to sign in
+              </button>
+
+              <h2 id="auth-title" className="mt-4 text-[17px] font-medium text-white">Reset your password</h2>
+              <p className="mt-2 text-[13px] leading-5 text-slate-400">
+                Enter the email you signed up with and we’ll send a 6 digit code to set a new password.
+              </p>
+
+              {accountsOff ? (
+                <p className="mt-6 p-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] text-[13px] text-amber-300">
+                  Accounts are off on this server, so there is no password to reset.
+                </p>
+              ) : (
+                <form onSubmit={submitForgot} noValidate className="mt-6 space-y-4">
+                  <div>
+                    <label htmlFor="auth-email" className="block text-[13px] text-slate-300">Email</label>
+                    <input id="auth-email" type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com" className={`mt-2 ${field}`} />
+                  </div>
+                  <p role="alert" aria-live="polite" className={`text-[13px] text-rose-400 ${error ? '' : 'hidden'}`}>{error}</p>
+                  <button type="submit" disabled={loading}
+                    className="btn-primary-glow w-full h-10 rounded-[10px] text-sm font-medium transition-colors disabled:opacity-60 active:scale-[0.98] inline-flex items-center justify-center gap-2">
+                    {loading && <Spinner size={16} label="Sending code" />}
+                    {loading ? 'Sending' : 'Send code'}
+                  </button>
+                </form>
+              )}
+            </>
+          ) : mode === 'reset' ? (
+            <>
+              <button
+                type="button"
+                onClick={() => switchMode('forgot')}
+                className="mt-6 -ml-1 h-8 px-1 inline-flex items-center gap-2 rounded-md text-[13px] text-slate-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                Use a different email
+              </button>
+
+              <h2 id="auth-title" className="mt-4 text-[17px] font-medium text-white">
+                {codeInConsole ? 'Enter your code' : 'Check your email'}
+              </h2>
+              <p className="mt-2 text-[13px] leading-5 text-slate-400">
+                {codeInConsole ? (
+                  <>Email sending is not set up, so if <span className="text-white">{pendingEmail}</span> has an account the code is printed in the backend console</>
+                ) : (
+                  <>If <span className="text-white">{pendingEmail}</span> has an account, we sent it a 6 digit code. It expires in 10 minutes.</>
+                )}
+              </p>
+
+              <form onSubmit={submitReset} noValidate className="mt-6 space-y-4">
+                <div>
+                  <label htmlFor="auth-code" className="block text-[13px] text-slate-300">Reset code</label>
+                  <div className="mt-2">
+                    <CodeBoxes value={code} onChange={setCode} disabled={loading} />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="auth-new-password" className="block text-[13px] text-slate-300">New password</label>
+                  <div className="mt-2 relative">
+                    <input id="auth-new-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password"
+                      aria-describedby="auth-new-password-hint" value={password} onChange={(e) => setPassword(e.target.value)}
+                      className={`${field} pr-10`} />
+                    <button type="button" onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-1 top-1 w-8 h-8 grid place-items-center rounded-lg text-slate-500 hover:text-white transition-colors">
+                      {showPassword ? <EyeOff className="w-4 h-4" strokeWidth={1.5} /> : <Eye className="w-4 h-4" strokeWidth={1.5} />}
+                    </button>
+                  </div>
+                  <p id="auth-new-password-hint" className={`mt-2 flex items-center gap-2 text-xs transition-colors ${passwordOk ? 'text-slate-300' : 'text-slate-500'}`}>
+                    <Check className={`w-4 h-4 transition-colors ${passwordOk ? 'text-emerald-400' : 'text-slate-600'}`} strokeWidth={1.5} />
+                    At least 8 characters
+                  </p>
+                </div>
+
+                <p role="alert" aria-live="polite" className={`text-[13px] text-rose-400 ${error ? '' : 'hidden'}`}>{error}</p>
+                <p aria-live="polite" className={`text-[13px] text-slate-400 ${notice && !error ? '' : 'hidden'}`}>{notice}</p>
+
+                <button type="submit" disabled={loading || code.length !== 6 || !passwordOk}
+                  className="btn-primary-glow w-full h-10 rounded-[10px] text-sm font-medium transition-colors disabled:opacity-60 active:scale-[0.98] inline-flex items-center justify-center gap-2">
+                  {loading && <Spinner size={16} label="Resetting password" />}
+                  {loading ? 'Resetting' : 'Reset password and sign in'}
+                </button>
+              </form>
+
+              <p className="mt-6 text-[13px] text-slate-500">
+                No code?{' '}
+                <button type="button" onClick={resendReset} disabled={retryIn > 0 || loading}
+                  className="text-white disabled:text-slate-500 underline underline-offset-4 decoration-white/30 hover:decoration-white disabled:no-underline rounded-sm tabular-nums">
+                  {retryIn > 0 ? `Send another in ${retryIn} s` : 'Send another'}
+                </button>
+              </p>
+            </>
           ) : (
             <>
               <h2 id="auth-title" className="mt-6 md:sr-only text-[17px] font-medium text-white">{copy.title}</h2>
@@ -475,6 +707,15 @@ export default function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess,
                           {showPassword ? <EyeOff className="w-4 h-4" strokeWidth={1.5} /> : <Eye className="w-4 h-4" strokeWidth={1.5} />}
                         </button>
                       </div>
+                      {mode === 'signin' && (
+                        <button
+                          type="button"
+                          onClick={() => switchMode('forgot')}
+                          className="mt-2 text-xs text-slate-400 hover:text-white underline underline-offset-4 decoration-white/30 hover:decoration-white rounded-sm"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
                       {mode === 'signup' && (
                         <p id="auth-password-hint" className={`mt-2 flex items-center gap-2 text-xs transition-colors ${passwordOk ? 'text-slate-300' : 'text-slate-500'}`}>
                           <Check className={`w-4 h-4 transition-colors ${passwordOk ? 'text-emerald-400' : 'text-slate-600'}`} strokeWidth={1.5} />

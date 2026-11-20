@@ -1,5 +1,6 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import ws from 'ws';
+import { isTesting } from './app-mode.js';
 
 // Neon connection. Set DATABASE_URL in backend/.env (see .env.example).
 // Without it, the store falls back to the local db.json file and accounts are off.
@@ -10,15 +11,30 @@ neonConfig.webSocketConstructor = ws;
 
 const { DATABASE_URL } = process.env;
 
-export const hasDatabase = Boolean(DATABASE_URL);
+// Testing mode never connects, even with DATABASE_URL set, so real users' data is never touched
+export const hasDatabase = Boolean(DATABASE_URL) && !isTesting;
 
-export const pool = hasDatabase
+const realPool = hasDatabase
   ? new Pool({ connectionString: DATABASE_URL, max: 5, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000 })
   : null;
 
-if (pool) {
+if (realPool) {
   // Neon closes idle connections; log instead of crashing the server
-  pool.on('error', (err) => console.error('[neon] idle client error:', err.message));
+  realPool.on('error', (err) => console.error('[neon] idle client error:', err.message));
+}
+
+// What the rest of the app imports: a stable handle that forwards to whatever database is behind
+// it. Normally that is the Neon pool; the tests swap in an in-memory Postgres with setBackend(),
+// so the real SQL runs in tests without touching any real database. Nothing in the app calls
+// setBackend.
+let backend = realPool;
+export const pool = realPool
+  ? { query: (text, params) => backend.query(text, params), connect: () => backend.connect(), end: () => backend.end() }
+  : null;
+
+/** Tests only: point the pool at another Postgres-compatible backend ({ query, connect, end }) */
+export function setBackend(other) {
+  backend = other;
 }
 
 export function query(text, params) {

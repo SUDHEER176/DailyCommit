@@ -16,11 +16,15 @@ import PersonalizedPlannerView from './PersonalizedPlanner/PersonalizedPlannerVi
 import CodeWorkspace from './CodeWorkspace/CodeWorkspace';
 import DailyProblemCard from './practice/DailyProblemCard';
 import RevisionQueueCard from './practice/RevisionQueueCard';
+import NextUpCard, { useNextProblem } from './practice/NextUpCard';
+import ProgressCard from './practice/ProgressCard';
 import { api } from '../services/api';
 import {
   dailyProblem, readDailyLog, markDailySolved, activeDays, currentStreak, localDay,
   revisionSchedule, editorProblem, PROBLEM_COUNT, TOPIC_COUNT,
+  reviewResultFromAttempt, withLocalDueDate, PROBLEMS,
 } from '@/lib/practice';
+import { useAppMode } from '@/lib/appMode';
 
 export default function PracticeHub({
   onNavigate,
@@ -55,24 +59,49 @@ export default function PracticeHub({
   // Why the editor is open, so an accepted submit can be recorded: { kind: 'daily' | 'review', id }
   const [editorContext, setEditorContext] = useState(null);
 
-  const loadPlan = () => api.getStudyPlan().then((p) => setPlan(p?.days ? p : null)).catch(() => setPlan(null));
-  // Reload when coming back to the hub, since the planner and editor change the plan
+  // Smart revision (Pro) is computed on the server, which also decides who gets it. Free
+  // accounts, and offline sessions, get the fixed day 3 / 7 / 21 schedule computed here.
+  const [smartSchedule, setSmartSchedule] = useState(null);
+  // What revision and progress are built from besides the plan: problems solved in the editor
+  // (so they work without a study plan), and reviews done on those
+  const [attempts, setAttempts] = useState({});
+  const [attemptReviews, setAttemptReviews] = useState({});
+  const [progress, setProgress] = useState(null);
+  const loadPlan = () => {
+    api.getRevisionSchedule().then((s) => setSmartSchedule(s?.smart ? s : null)).catch(() => setSmartSchedule(null));
+    api.getAttempts().then((a) => setAttempts(a && !Array.isArray(a) ? a : {})).catch(() => {});
+    api.getAttemptReviews().then((r) => setAttemptReviews(r || {})).catch(() => {});
+    api.getProgress().then(setProgress).catch(() => setProgress(null));
+    return api.getStudyPlan().then((p) => setPlan(p?.days ? p : null)).catch(() => setPlan(null));
+  };
+  const smartRevision = Boolean(smartSchedule);
+  // Testing mode: no sign-in at all, so the sign-in prompts are replaced by a note
+  const testingMode = useAppMode() === 'testing';
+
+  // Reload when coming back to the hub, since the planner and editor change the plan, and when
+  // signing in or out or buying Pro, which changes which revision schedule applies
   useEffect(() => {
     if (activeView === 'sheets' && !activeEditorProblem) loadPlan();
-  }, [activeView, activeEditorProblem]);
+  }, [activeView, activeEditorProblem, currentUser?.isAuthenticated, currentUser?.plan]);
 
   const today = dailyProblem();
   const planQuestion = (id) => plan?.days?.flatMap((d) => d.questions).find((q) => q.id === id);
   const todayKey = localDay();
   const solvedToday = dailyLog[todayKey] === today.id
     || Boolean(planQuestion(today.id)?.completedAt && localDay(new Date(planQuestion(today.id).completedAt)) === todayKey);
-  const streak = currentStreak(activeDays(plan, dailyLog));
-  const schedule = revisionSchedule(plan);
+  const streak = currentStreak(activeDays(plan, dailyLog, attempts));
+  const schedule = smartSchedule
+    ? { due: smartSchedule.due.map(withLocalDueDate), upcoming: smartSchedule.upcoming.map(withLocalDueDate), mastered: smartSchedule.mastered }
+    : revisionSchedule(plan, new Date(), { attempts, problems: PROBLEMS, attemptReviews });
 
   const openEditor = (problem, context) => {
     setEditorContext(context);
     setActiveEditorProblem(editorProblem(problem));
   };
+
+  // Adaptive "Next up": refetched whenever the editor closes, since a solve changes the suggestion
+  const nextUp = useNextProblem({ refreshKey: activeEditorProblem ? `editing-${activeEditorProblem.id}` : 'hub', enabled: !activeEditorProblem });
+  const openSuggested = (problem) => openEditor(problem, { kind: 'next', id: problem.id });
 
   // An accepted submit in the editor: count the daily problem, or record the review
   const handleProblemSolved = async () => {
@@ -83,16 +112,24 @@ export default function PracticeHub({
       const q = planQuestion(ctx.id);
       if (q && !q.completed) await api.updatePlannedQuestion(ctx.id, { completed: true });
     } else if (ctx.kind === 'review') {
-      await api.updatePlannedQuestion(ctx.id, { reviewed: true });
+      // Solving it again is the review; with smart revision, how it went sets the next gap.
+      // The editor saves the attempt locally before calling this, so the latest one is there.
+      const latest = api.getLocalAttempts(ctx.id).slice(-1)[0];
+      const difficulty = planQuestion(ctx.id)?.difficulty || PROBLEMS.find((p) => p.id === ctx.id)?.difficulty;
+      const reviewResult = smartRevision && latest ? reviewResultFromAttempt(latest, difficulty) : undefined;
+      await api.recordReview(ctx.id, reviewResult);
       setEditorContext(null); // one review per accepted submit
+    } else if (ctx.kind === 'next') {
+      // A suggested problem that is also in the plan counts as done there
+      const q = planQuestion(ctx.id);
+      if (q && !q.completed) await api.updatePlannedQuestion(ctx.id, { completed: true });
     }
     loadPlan();
   };
 
-  const markReviewed = async (item) => {
-    const updated = await api.updatePlannedQuestion(item.question.id, { reviewed: true });
-    if (updated?.days) setPlan(updated);
-    else loadPlan();
+  const markReviewed = async (item, reviewResult) => {
+    await api.recordReview(item.question.id, reviewResult);
+    await loadPlan();
   };
 
   // Sheets. Only DailyCode 150 has problems behind it today; the others are outlines being written.
@@ -447,17 +484,21 @@ export default function PracticeHub({
                   <User className="w-4 h-4" />
                 </div>
                 <div className="overflow-hidden">
-                  <span className="text-[13px] text-white block">Guest</span>
-                  <span className="text-xs text-slate-500 block truncate">Sign in to sync your streak</span>
+                  <span className="text-[13px] text-white block">{testingMode ? 'Tester' : 'Guest'}</span>
+                  <span className="text-xs text-slate-500 block truncate">
+                    {testingMode ? 'Testing mode: no sign-in, Pro is free' : 'Sign in to sync your streak'}
+                  </span>
                 </div>
               </div>
-              <button
-                onClick={onOpenAuthModal}
-                className="w-full h-8 rounded-lg bg-slate-100 hover:bg-white text-ink-900 text-[13px] font-medium transition-colors active:scale-[0.98] flex items-center justify-center gap-2"
-              >
-                <LogIn className="w-4 h-4" strokeWidth={1.5} />
-                <span>Sign in</span>
-              </button>
+              {!testingMode && (
+                <button
+                  onClick={onOpenAuthModal}
+                  className="w-full h-8 rounded-lg bg-slate-100 hover:bg-white text-ink-900 text-[13px] font-medium transition-colors active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  <LogIn className="w-4 h-4" strokeWidth={1.5} />
+                  <span>Sign in</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -510,7 +551,10 @@ export default function PracticeHub({
               <span>day streak</span>
             </div>
 
-            {/* Profile Button Pill */}
+            {/* Profile Button Pill (testing mode has no accounts, so a label instead) */}
+            {testingMode ? (
+              <span className="flex items-center h-8 px-2.5 rounded-lg text-[13px] text-amber-300 bg-amber-500/10">Testing mode</span>
+            ) : (
             <button
               onClick={onOpenAuthModal}
               className="flex items-center gap-2 h-8 px-2.5 rounded-lg hover:bg-white/[0.06] text-[13px] text-slate-300 hover:text-white transition-colors"
@@ -523,6 +567,7 @@ export default function PracticeHub({
                 {currentUser?.isAuthenticated ? (currentUser.name?.split(' ')[0] || 'Profile') : 'Sign in'}
               </span>
             </button>
+            )}
           </div>
         </div>
 
@@ -533,6 +578,7 @@ export default function PracticeHub({
               problem={activeEditorProblem}
               onBack={() => { setActiveEditorProblem(null); setEditorContext(null); }}
               onProblemSolved={handleProblemSolved}
+              onOpenProblem={openSuggested}
             />
           </div>
         ) : activeView === 'planner' ? (
@@ -554,6 +600,17 @@ export default function PracticeHub({
               solvedToday={solvedToday}
               streak={streak}
               onSolve={() => openEditor(today, { kind: 'daily', id: today.id })}
+            />
+
+            {/* Adaptive next problem, picked from how recent solves went */}
+            <NextUpCard rec={nextUp.rec} loading={nextUp.loading} onOpen={openSuggested} onSkip={nextUp.skip} />
+
+            {/* Solved, covered and left: the basics for everyone, the detail for Pro */}
+            <ProgressCard
+              data={progress}
+              streak={streak}
+              revisionsDue={schedule.due.length}
+              onUpgrade={currentUser?.isAuthenticated ? () => onNavigate && onNavigate('/pricing') : null}
             />
 
             {/* DailyCode 150 Personalized Planner Featured Banner */}
@@ -686,10 +743,12 @@ export default function PracticeHub({
 
             <RevisionQueueCard
               schedule={schedule}
-              hasPlan={Boolean(plan)}
+              hasPlan={Boolean(plan) || schedule.due.length + schedule.upcoming.length > 0}
               onReview={(item) => openEditor(item.question, { kind: 'review', id: item.question.id })}
               onMarkReviewed={markReviewed}
               onOpenPlanner={() => setActiveView('planner')}
+              smart={smartRevision}
+              onUpgrade={currentUser?.isAuthenticated ? () => onNavigate && onNavigate('/pricing') : null}
             />
 
             {/* Daily Planner Widget */}

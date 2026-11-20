@@ -6,9 +6,14 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start:testing": "node server.js --testing",
+    "start:production": "node server.js --production",
+    "dev": "node --watch server.js",
+    "dev:testing": "node --watch server.js --testing",
+    "test": "node --test \"test/**/*.test.js\""
   },
   "dependencies": {
+    "@google/genai": "^3.6.0",
     "@neondatabase/serverless": "^0.10.4",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -17,5 +22,8 @@
     "google-auth-library": "^9.15.1",
     "nodemailer": "^6.10.1",
     "ws": "^8.22.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16"
   }
 }

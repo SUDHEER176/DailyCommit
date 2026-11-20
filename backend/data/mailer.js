@@ -92,6 +92,29 @@ It expires in 10 minutes. If you did not try to sign up, you can ignore this ema
   return { delivered: true };
 }
 
+export async function sendPasswordResetCode({ to, name, code, appName = 'Daily Commit' }) {
+  if (!mailProvider) {
+    console.log(`\n[mail] Email not set up. Password reset code for ${to}: ${code}\n`);
+    return { delivered: false };
+  }
+  const text = `Hi ${name || 'there'},
+
+Your ${appName} password reset code is ${code}
+
+It expires in 10 minutes. If you did not ask to reset your password, you can ignore this email and your password stays the same.`;
+
+  const html = `
+  <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:420px;margin:0 auto;padding:32px 24px;color:#111827">
+    <p style="margin:0 0 16px;font-size:15px">Hi ${escapeHtml(name || 'there')},</p>
+    <p style="margin:0 0 24px;font-size:15px">Your ${appName} password reset code is</p>
+    <p style="margin:0 0 24px;font-family:ui-monospace,Menlo,monospace;font-size:32px;letter-spacing:6px;font-weight:600">${code}</p>
+    <p style="margin:0;font-size:13px;color:#4b5565">It expires in 10 minutes. If you did not ask to reset your password, you can ignore this email and your password stays the same.</p>
+  </div>`;
+
+  await deliver({ to, subject: `${code} is your ${appName} password reset code`, text, html });
+  return { delivered: true };
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }

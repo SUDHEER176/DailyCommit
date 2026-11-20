@@ -6,7 +6,10 @@ import { hasDatabase, ensureSchema, loadState, loadUserState, upsertUserKeys } f
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, 'db.json');
+// File mode (testing mode) keeps its data in data/testing-db.json, which is not in git, and starts
+// empty. DB_FILE points it somewhere else (tests use a temp file). The tracked data/db.json is
+// only the old demo seed and is no longer written to.
+const DB_FILE = process.env.DB_FILE || path.join(__dirname, 'testing-db.json');
 
 // Initial default seed data
 const defaultData = {
@@ -313,6 +316,17 @@ export async function loadUserData(userId) {
   return entry.data;
 }
 
+/**
+ * Drop a person's in-memory data, after waiting for any save in flight, so a deleted account
+ * can't be written back to the database by a late save. Call it before deleting their rows.
+ */
+export async function forgetUserData(userId) {
+  const entry = userCache.get(userId);
+  if (!entry) return;
+  await entry.chain.catch(() => {});
+  userCache.delete(userId);
+}
+
 function flushUser(userId) {
   const entry = userCache.get(userId);
   if (!entry) return Promise.resolve();
@@ -374,10 +388,13 @@ function writeLocalFile(data) {
   }
 }
 
+// Testing mode starts from a clean slate (no plan, nothing solved), so the first
+// recommendations reflect only what the tester does.
+
 /** Call once before the server starts listening */
 export async function initDb() {
   if (!hasDatabase) {
-    fileDb = readLocalFile() || JSON.parse(JSON.stringify(defaultData));
+    fileDb = readLocalFile() || freshUserData({ name: 'Tester' });
     if (!fs.existsSync(DB_FILE)) writeLocalFile(fileDb);
     return { mode: 'file' };
   }
@@ -392,7 +409,7 @@ export function getDb() {
     if (!entry) throw new Error('getDb() called outside a signed-in request');
     return entry.data;
   }
-  if (!fileDb) fileDb = readLocalFile() || JSON.parse(JSON.stringify(defaultData));
+  if (!fileDb) fileDb = readLocalFile() || freshUserData({ name: 'Tester' });
   return fileDb;
 }
 

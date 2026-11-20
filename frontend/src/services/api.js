@@ -34,7 +34,30 @@ function clearSession() {
   } catch (e) {}
 }
 
+// Routes that work without signing in. Everything else needs a session when accounts are on.
+const PUBLIC_PATHS = ['/auth/', '/billing/plans', '/health', '/execute', '/problems/details/'];
+let accountsOn = null; // whether the server needs sign-in; null until the server has been asked
+let accountsProbe = null;
+
+/**
+ * A signed-out visitor to a server with accounts on can't use the data routes, so don't send them
+ * just to be refused: answer 401 right here and let the caller fall back to the local copy.
+ */
+async function refusedWithoutSignIn(url) {
+  if (getToken() || PUBLIC_PATHS.some((p) => url.startsWith(`${API_BASE}${p}`))) return false;
+  if (accountsOn === null) {
+    accountsProbe ||= api.getAuthConfig(); // one question, however many calls are waiting on it
+    const cfg = await accountsProbe;
+    if (cfg.offline) { accountsProbe = null; return false; } // can't tell: send it and let it fail as usual
+    accountsOn = Boolean(cfg.accounts);
+  }
+  return accountsOn;
+}
+
 async function apiFetch(url, options = {}) {
+  if (await refusedWithoutSignIn(url)) {
+    return new Response(JSON.stringify({ success: false, error: 'Sign in to continue' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
   const token = getToken();
   const headers = { ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -460,6 +483,65 @@ export const api = {
     return authRequest('/auth/resend-code', { email });
   },
 
+  /** Ask for a password reset code. The server answers the same for every address. → { success, email, retryAfter } */
+  async forgotPassword(email) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) return { success: true, email: json.data.email, retryAfter: json.data.retryAfter || 60 };
+      return { success: false, error: json.error || 'Something went wrong. Try again' };
+    } catch (e) {
+      return { success: false, error: 'Can’t reach the server. Check that the backend is running' };
+    }
+  },
+
+  /** Everything stored about the signed-in person. → { success, data } */
+  async exportMyData() {
+    try {
+      const res = await apiFetch(`${API_BASE}/auth/me/export`, { signal: AbortSignal.timeout(15000) });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) return { success: true, data: json.data };
+      return { success: false, error: json.error || 'Could not export your data' };
+    } catch (e) {
+      return { success: false, error: 'Can’t reach the server. Check that the backend is running' };
+    }
+  },
+
+  /**
+   * Delete the account. Send { password }, or { confirm: <your email> } for a Google-only account.
+   * On success this browser forgets everything saved locally too.
+   */
+  async deleteAccount(body) {
+    try {
+      const res = await apiFetch(`${API_BASE}/auth/me`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15000),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) {
+        try {
+          Object.keys(localStorage).filter((k) => k.startsWith('codestreak_') || k === 'dc_daily_solved').forEach((k) => localStorage.removeItem(k));
+        } catch (e) {}
+        return { success: true };
+      }
+      return { success: false, error: json.error || 'Could not delete your account' };
+    } catch (e) {
+      return { success: false, error: 'Can’t reach the server. Check that the backend is running' };
+    }
+  },
+
+  /** Set a new password with the emailed code. Signs in on success, like login. */
+  async resetPassword({ email, code, password }) {
+    return authRequest('/auth/reset-password', { email, code, password });
+  },
+
   async loginWithGoogle(credential) {
     return authRequest('/auth/google', { credential });
   },
@@ -495,6 +577,21 @@ export const api = {
 
   async verifyPayment({ orderId, paymentId, signature }) {
     return billingPost('/billing/verify', { orderId, paymentId, signature });
+  },
+
+  /** → { payments, plan, proUntil } or null when it can't be loaded */
+  async getBillingHistory() {
+    try {
+      const res = await apiFetch(`${API_BASE}/billing/history`, { signal: AbortSignal.timeout(6000) });
+      if (res.ok) return (await res.json()).data;
+    } catch (e) {}
+    return null;
+  },
+
+  /** Merge a change (e.g. Pro status after paying) into the cached profile used when offline */
+  updateCachedUser(patch) {
+    const cached = getLocal('auth_user', null);
+    if (cached) setLocal('auth_user', { ...cached, ...patch });
   },
 
   async logout() {
@@ -583,6 +680,195 @@ export const api = {
     return plan;
   },
 
+  // ── Attempts (signals for the next-problem recommender) ──
+  // Always kept locally too, so guests and offline sessions still have their history.
+  // `keepalive` lets the request finish while the page is closing.
+  async recordAttempt(attempt, { keepalive = false } = {}) {
+    const all = getLocal('attempts', {});
+    const list = (all[attempt.problemId] || []).filter((a) => a.id !== attempt.id);
+    all[attempt.problemId] = [...list, attempt].slice(-20);
+    setLocal('attempts', all);
+
+    // Guests get a 401 in Neon mode; the local copy above is kept either way
+    try {
+      const res = await apiFetch(`${API_BASE}/planner/attempts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attempt),
+        keepalive,
+        ...(keepalive ? {} : { signal: AbortSignal.timeout(4000) }),
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  // ── AI code review (Pro) ──
+  async getAiStatus() {
+    try {
+      const res = await apiFetch(`${API_BASE}/ai/status`, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) return (await res.json()).data;
+    } catch (e) {}
+    return { reviewEnabled: false };
+  },
+
+  /** → { success: true, data } or { success: false, status, error, upgrade } */
+  async reviewCode({ problemId, attemptId, title, difficulty, language, code }) {
+    try {
+      const res = await apiFetch(`${API_BASE}/ai/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ problemId, attemptId, title, difficulty, language, code }),
+        signal: AbortSignal.timeout(120000), // the model takes a while to think
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) return { success: true, data: json.data };
+      return { success: false, status: res.status, upgrade: Boolean(json.upgrade), error: json.error || 'Could not review this solution' };
+    } catch (e) {
+      return { success: false, error: 'Can’t reach the server. Check that the backend is running' };
+    }
+  },
+
+  /**
+   * Smart revision queue from the server: { smart: true, due, upcoming, mastered } for Pro, or
+   * { smart: false } for Free (the caller then shows the fixed day 3 / 7 / 21 schedule).
+   * null when the server can't be reached, which also falls back to the fixed schedule.
+   */
+  async getRevisionSchedule() {
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    try {
+      const params = new URLSearchParams({ today, tz: String(d.getTimezoneOffset()) });
+      const res = await apiFetch(`${API_BASE}/planner/revision?${params}`, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) return (await res.json()).data;
+    } catch (e) {}
+    return null;
+  },
+
+  /** Reviews done on problems that aren't in a study plan: { problemId: { reviews, reviewResults } } */
+  async getAttemptReviews() {
+    try {
+      const res = await apiFetch(`${API_BASE}/planner/review`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) return (await res.json()).data || {};
+    } catch (e) {}
+    return getLocal('attempt_reviews', {});
+  },
+
+  /**
+   * Record one spaced-revision review, with an optional rating ('hard' | 'ok' | 'easy').
+   * The server puts it on the plan's question, or keeps it separately when the problem isn't in a plan.
+   * Offline it's kept locally the same way. Resolves true when saved.
+   */
+  async recordReview(problemId, reviewResult) {
+    try {
+      const res = await apiFetch(`${API_BASE}/planner/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ problemId, reviewResult }),
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) return true;
+    } catch (e) {}
+    const now = new Date().toISOString();
+    const result = ['hard', 'ok', 'easy'].includes(reviewResult) ? reviewResult : null;
+    const plan = getLocal('study_plan', null);
+    let inPlan = false;
+    (plan?.days || []).forEach((d) => (d.questions || []).forEach((q) => {
+      if (q.id !== problemId) return;
+      const reviews = Array.isArray(q.reviews) ? q.reviews : [];
+      const results = Array.isArray(q.reviewResults) ? q.reviewResults.slice(0, reviews.length) : [];
+      while (results.length < reviews.length) results.push(null);
+      q.reviews = [...reviews, now];
+      q.reviewResults = [...results, result];
+      inPlan = true;
+    }));
+    if (inPlan) { setLocal('study_plan', plan); return true; }
+    const all = getLocal('attempt_reviews', {});
+    const entry = all[problemId] || { reviews: [], reviewResults: [] };
+    all[problemId] = { reviews: [...entry.reviews, now], reviewResults: [...entry.reviewResults, result] };
+    setLocal('attempt_reviews', all);
+    return true;
+  },
+
+  /** Progress summary: { solved, total, remaining, solvedToday, topicsStarted, ..., detailed } or null */
+  async getProgress() {
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    try {
+      const params = new URLSearchParams({ today, tz: String(d.getTimezoneOffset()) });
+      const res = await apiFetch(`${API_BASE}/planner/progress?${params}`, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) return (await res.json()).data;
+    } catch (e) {}
+    return null;
+  },
+
+  // ── Testing mode only (these routes don't exist in production) ──
+  async loadSampleData() {
+    try {
+      const res = await fetch(`${API_BASE}/dev/seed`, { method: 'POST', signal: AbortSignal.timeout(5000) });
+      return res.ok;
+    } catch (e) { return false; }
+  },
+
+  async resetTestingData() {
+    try {
+      const res = await fetch(`${API_BASE}/dev/reset`, { method: 'POST', signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return false;
+      // Also forget what this browser saved, so the offline fallbacks don't bring it back
+      ['attempts', 'attempt_reviews', 'study_plan'].forEach((k) => { try { localStorage.removeItem(`codestreak_${k}`); } catch (e) {} });
+      try { localStorage.removeItem('dc_daily_solved'); } catch (e) {}
+      return true;
+    } catch (e) { return false; }
+  },
+
+  /** The locally saved attempts, synchronously (always up to date with this browser's last save) */
+  getLocalAttempts(problemId) {
+    const all = getLocal('attempts', {});
+    return problemId ? all[problemId] || [] : all;
+  },
+
+  async getAttempts(problemId) {
+    try {
+      const q = problemId ? `?problemId=${encodeURIComponent(problemId)}` : '';
+      const res = await apiFetch(`${API_BASE}/planner/attempts${q}`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) return (await res.json()).data;
+    } catch (e) {}
+    const all = getLocal('attempts', {});
+    return problemId ? all[problemId] || [] : all;
+  },
+
+  /**
+   * The next problem to work on: { problem, kind, reason, patternName, ... } or null when everything is solved.
+   * Asks the server; offline (or as a guest when the server needs sign-in) the same recommender runs
+   * here on the locally saved plan and attempts.
+   */
+  async getNextProblem({ after = null, exclude = [] } = {}) {
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    try {
+      const params = new URLSearchParams({ today });
+      if (after) params.set('after', after);
+      if (exclude.length) params.set('exclude', exclude.join(','));
+      const res = await apiFetch(`${API_BASE}/planner/next?${params}`, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) return (await res.json()).data;
+    } catch (e) {}
+    const [{ recommendNext }, questions, graph] = await Promise.all([
+      import('../lib/recommender.js'),
+      import('../data/neetcode150.json'),
+      import('../data/problemGraph.json'),
+    ]);
+    return recommendNext({
+      problems: questions.default || questions,
+      graph: graph.default || graph,
+      attempts: getLocal('attempts', {}),
+      plan: getLocal('study_plan', null),
+      afterId: after,
+      today,
+      exclude,
+    });
+  },
+
   async updatePlannedQuestion(questionId, updates) {
     try {
       const res = await apiFetch(`${API_BASE}/planner/question/${questionId}`, {
@@ -608,13 +894,20 @@ export const api = {
     plan.days.forEach(day => {
       day.questions.forEach(q => {
         if (q.id === questionId) {
-          const { reviewed, ...fields } = updates;
+          const { reviewed, reviewResult, ...fields } = updates;
           Object.assign(q, fields);
           if (updates.completed !== undefined) {
             q.completedAt = updates.completed ? new Date().toISOString() : null;
           }
-          // Same as the backend: `reviewed: true` records one spaced-revision review
-          if (reviewed === true) q.reviews = [...(Array.isArray(q.reviews) ? q.reviews : []), new Date().toISOString()];
+          // Same as the backend: `reviewed: true` records one spaced-revision review, with an
+          // optional rating ('hard' | 'ok' | 'easy') kept in reviewResults, aligned with reviews
+          if (reviewed === true) {
+            const reviews = Array.isArray(q.reviews) ? q.reviews : [];
+            const results = Array.isArray(q.reviewResults) ? q.reviewResults.slice(0, reviews.length) : [];
+            while (results.length < reviews.length) results.push(null);
+            q.reviews = [...reviews, new Date().toISOString()];
+            q.reviewResults = [...results, ['hard', 'ok', 'easy'].includes(reviewResult) ? reviewResult : null];
+          }
           updatedQ = q;
         }
       });
