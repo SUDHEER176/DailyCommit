@@ -149,7 +149,7 @@
     "starterTemplates": {
       "cpp": "class Solution {\npublic:\n    vector<int> productExceptSelf(vector<int>& nums) {\n        \n    }\n};",
       "java": "class Solution {\n    public int[] productExceptSelf(int[] nums) {\n        \n    }\n}",
-      "python": "class Solution(object):\n    def productExceptSelf(self, nums):\n        \"\"\"\n        :type nums: List[int]\n        :rtype: List[int]\n        \"\"\"\n        ",
+      "python": "class Solution:\n    def productExceptSelf(self, nums: list[int]) -> list[int]:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @return {number[]}\n */\nvar productExceptSelf = function(nums) {\n    \n};"
     },
     "examples": [
@@ -173,15 +173,34 @@
       {
         "id": 1,
         "input": "nums = [1,2,3,4]",
+        "args": [
+          "[1,2,3,4]"
+        ],
         "expected": "[24,12,8,6]"
       },
       {
         "id": 2,
         "input": "nums = [-1,1,0,-3,3]",
+        "args": [
+          "[-1,1,0,-3,3]"
+        ],
         "expected": "[0,0,9,0,0]"
       }
     ],
-    "hiddenTestCases": []
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "productExceptSelf",
+      "params": [
+        {
+          "name": "nums",
+          "type": "integer[]"
+        }
+      ],
+      "return": {
+        "type": "integer[]"
+      }
+    },
+    "cacheVersion": 3
   },
   "counting-bits": {
     "id": "nc-338",
@@ -730,7 +749,7 @@
     "starterTemplates": {
       "cpp": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        \n    }\n};",
       "java": "class Solution {\n    public int[] topKFrequent(int[] nums, int k) {\n        \n    }\n}",
-      "python": "class Solution(object):\n    def topKFrequent(self, nums, k):\n        \"\"\"\n        :type nums: List[int]\n        :type k: int\n        :rtype: List[int]\n        \"\"\"\n        ",
+      "python": "class Solution:\n    def topKFrequent(self, nums: list[int], k: int) -> list[int]:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @param {number} k\n * @return {number[]}\n */\nvar topKFrequent = function(nums, k) {\n    \n};"
     },
     "examples": [],
@@ -786,6 +805,217 @@
         "type": "integer[]"
       }
     },
-    "cacheVersion": 2
+    "cacheVersion": 3
+  },
+  "group-anagrams": {
+    "id": "nc-49",
+    "number": 49,
+    "title": "Group Anagrams",
+    "difficulty": "Medium",
+    "contentHtml": "<p>Given an array of strings <code>strs</code>, group the <span data-keyword=\"anagram\">anagrams</span> together. You can return the answer in <strong>any order</strong>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">strs = [&quot;eat&quot;,&quot;tea&quot;,&quot;tan&quot;,&quot;ate&quot;,&quot;nat&quot;,&quot;bat&quot;]</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">[[&quot;bat&quot;],[&quot;nat&quot;,&quot;tan&quot;],[&quot;ate&quot;,&quot;eat&quot;,&quot;tea&quot;]]</span></p>\n\n<p><strong>Explanation:</strong></p>\n\n<ul>\n\t<li>There is no string in strs that can be rearranged to form <code>&quot;bat&quot;</code>.</li>\n\t<li>The strings <code>&quot;nat&quot;</code> and <code>&quot;tan&quot;</code> are anagrams as they can be rearranged to form each other.</li>\n\t<li>The strings <code>&quot;ate&quot;</code>, <code>&quot;eat&quot;</code>, and <code>&quot;tea&quot;</code> are anagrams as they can be rearranged to form each other.</li>\n</ul>\n</div>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">strs = [&quot;&quot;]</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">[[&quot;&quot;]]</span></p>\n</div>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">strs = [&quot;a&quot;]</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">[[&quot;a&quot;]]</span></p>\n</div>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= strs.length &lt;= 10<sup>4</sup></code></li>\n\t<li><code>0 &lt;= strs[i].length &lt;= 100</code></li>\n\t<li><code>strs[i]</code> consists of lowercase English letters.</li>\n</ul>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    vector<vector<string>> groupAnagrams(vector<string>& strs) {\n        \n    }\n};",
+      "java": "class Solution {\n    public List<List<String>> groupAnagrams(String[] strs) {\n        \n    }\n}",
+      "python": "class Solution:\n    def groupAnagrams(self, strs: list[str]) -> list[list[str]]:\n        ",
+      "javascript": "/**\n * @param {string[]} strs\n * @return {string[][]}\n */\nvar groupAnagrams = function(strs) {\n    \n};"
+    },
+    "examples": [],
+    "constraints": [
+      "1 <= strs.length <= 104",
+      "0 <= strs[i].length <= 100",
+      "strs[i] consists of lowercase English letters."
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "strs = [\"eat\",\"tea\",\"tan\",\"ate\",\"nat\",\"bat\"]",
+        "args": [
+          "[\"eat\",\"tea\",\"tan\",\"ate\",\"nat\",\"bat\"]"
+        ],
+        "expected": "[[\"bat\"],[\"nat\",\"tan\"],[\"ate\",\"eat\",\"tea\"]]"
+      },
+      {
+        "id": 2,
+        "input": "strs = [\"\"]",
+        "args": [
+          "[\"\"]"
+        ],
+        "expected": "[[\"\"]]"
+      },
+      {
+        "id": 3,
+        "input": "strs = [\"a\"]",
+        "args": [
+          "[\"a\"]"
+        ],
+        "expected": "[[\"a\"]]"
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "groupAnagrams",
+      "params": [
+        {
+          "name": "strs",
+          "type": "string[]"
+        }
+      ],
+      "return": {
+        "type": "list<list<string>>",
+        "dealloc": true
+      }
+    },
+    "cacheVersion": 3
+  },
+  "minimum-window-substring": {
+    "id": "nc-76",
+    "number": 76,
+    "title": "Minimum Window Substring",
+    "difficulty": "Hard",
+    "contentHtml": "<p>Given two strings <code>s</code> and <code>t</code> of lengths <code>m</code> and <code>n</code> respectively, return <em>the <strong>minimum window</strong></em> <span data-keyword=\"substring-nonempty\"><strong><em>substring</em></strong></span><em> of </em><code>s</code><em> such that every character in </em><code>t</code><em> (<strong>including duplicates</strong>) is included in the window</em>. If there is no such substring, return <em>the empty string </em><code>&quot;&quot;</code>.</p>\n\n<p>The testcases will be generated such that the answer is <strong>unique</strong>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;ADOBECODEBANC&quot;, t = &quot;ABC&quot;\n<strong>Output:</strong> &quot;BANC&quot;\n<strong>Explanation:</strong> The minimum window substring &quot;BANC&quot; includes &#39;A&#39;, &#39;B&#39;, and &#39;C&#39; from string t.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;a&quot;, t = &quot;a&quot;\n<strong>Output:</strong> &quot;a&quot;\n<strong>Explanation:</strong> The entire string s is the minimum window.\n</pre>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;a&quot;, t = &quot;aa&quot;\n<strong>Output:</strong> &quot;&quot;\n<strong>Explanation:</strong> Both &#39;a&#39;s from t must be included in the window.\nSince the largest window of s only has one &#39;a&#39;, return empty string.\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>m == s.length</code></li>\n\t<li><code>n == t.length</code></li>\n\t<li><code>1 &lt;= m, n &lt;= 10<sup>5</sup></code></li>\n\t<li><code>s</code> and <code>t</code> consist of uppercase and lowercase English letters.</li>\n</ul>\n\n<p>&nbsp;</p>\n<p><strong>Follow up:</strong> Could you find an algorithm that runs in <code>O(m + n)</code> time?</p>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    string minWindow(string s, string t) {\n        \n    }\n};",
+      "java": "class Solution {\n    public String minWindow(String s, String t) {\n        \n    }\n}",
+      "python": "class Solution:\n    def minWindow(self, s: str, t: str) -> str:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @param {string} t\n * @return {string}\n */\nvar minWindow = function(s, t) {\n    \n};"
+    },
+    "examples": [
+      {
+        "input": "s = &quot;ADOBECODEBANC&quot;, t = &quot;ABC&quot;",
+        "output": "&quot;BANC&quot;",
+        "explanation": "The minimum window substring &quot;BANC&quot; includes &#39;A&#39;, &#39;B&#39;, and &#39;C&#39; from string t."
+      },
+      {
+        "input": "s = &quot;a&quot;, t = &quot;a&quot;",
+        "output": "&quot;a&quot;",
+        "explanation": "The entire string s is the minimum window."
+      },
+      {
+        "input": "s = &quot;a&quot;, t = &quot;aa&quot;",
+        "output": "&quot;&quot;",
+        "explanation": "Both &#39;a&#39;s from t must be included in the window.\nSince the largest window of s only has one &#39;a&#39;, return empty string."
+      }
+    ],
+    "constraints": [
+      "m == s.length",
+      "n == t.length",
+      "1 <= m, n <= 105",
+      "s and t consist of uppercase and lowercase English letters."
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "s = \"ADOBECODEBANC\"\nt = \"ABC\"",
+        "args": [
+          "\"ADOBECODEBANC\"",
+          "\"ABC\""
+        ],
+        "expected": "\"BANC\""
+      },
+      {
+        "id": 2,
+        "input": "s = \"a\"\nt = \"a\"",
+        "args": [
+          "\"a\"",
+          "\"a\""
+        ],
+        "expected": "\"a\""
+      },
+      {
+        "id": 3,
+        "input": "s = \"a\"\nt = \"aa\"",
+        "args": [
+          "\"a\"",
+          "\"aa\""
+        ],
+        "expected": "\"\""
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "minWindow",
+      "params": [
+        {
+          "name": "s",
+          "type": "string"
+        },
+        {
+          "name": "t",
+          "type": "string"
+        }
+      ],
+      "return": {
+        "type": "string"
+      }
+    },
+    "cacheVersion": 3
+  },
+  "longest-repeating-character-replacement": {
+    "id": "nc-424",
+    "number": 424,
+    "title": "Longest Repeating Character Replacement",
+    "difficulty": "Medium",
+    "contentHtml": "<p>You are given a string <code>s</code> and an integer <code>k</code>. You can choose any character of the string and change it to any other uppercase English character. You can perform this operation at most <code>k</code> times.</p>\n\n<p>Return <em>the length of the longest substring containing the same letter you can get after performing the above operations</em>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;ABAB&quot;, k = 2\n<strong>Output:</strong> 4\n<strong>Explanation:</strong> Replace the two &#39;A&#39;s with two &#39;B&#39;s or vice versa.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;AABABBA&quot;, k = 1\n<strong>Output:</strong> 4\n<strong>Explanation:</strong> Replace the one &#39;A&#39; in the middle with &#39;B&#39; and form &quot;AABBBBA&quot;.\nThe substring &quot;BBBB&quot; has the longest repeating letters, which is 4.\nThere may exists other ways to achieve this answer too.</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= s.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>s</code> consists of only uppercase English letters.</li>\n\t<li><code>0 &lt;= k &lt;= s.length</code></li>\n</ul>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    int characterReplacement(string s, int k) {\n        \n    }\n};",
+      "java": "class Solution {\n    public int characterReplacement(String s, int k) {\n        \n    }\n}",
+      "python": "class Solution:\n    def characterReplacement(self, s: str, k: int) -> int:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @param {number} k\n * @return {number}\n */\nvar characterReplacement = function(s, k) {\n    \n};"
+    },
+    "examples": [
+      {
+        "input": "s = &quot;ABAB&quot;, k = 2",
+        "output": "4",
+        "explanation": "Replace the two &#39;A&#39;s with two &#39;B&#39;s or vice versa."
+      },
+      {
+        "input": "s = &quot;AABABBA&quot;, k = 1",
+        "output": "4",
+        "explanation": "Replace the one &#39;A&#39; in the middle with &#39;B&#39; and form &quot;AABBBBA&quot;.\nThe substring &quot;BBBB&quot; has the longest repeating letters, which is 4.\nThere may exists other ways to achieve this answer too."
+      }
+    ],
+    "constraints": [
+      "1 <= s.length <= 105",
+      "s consists of only uppercase English letters.",
+      "0 <= k <= s.length"
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "s = \"ABAB\"\nk = 2",
+        "args": [
+          "\"ABAB\"",
+          "2"
+        ],
+        "expected": "4"
+      },
+      {
+        "id": 2,
+        "input": "s = \"AABABBA\"\nk = 1",
+        "args": [
+          "\"AABABBA\"",
+          "1"
+        ],
+        "expected": "4"
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "characterReplacement",
+      "params": [
+        {
+          "name": "s",
+          "type": "string"
+        },
+        {
+          "name": "k",
+          "type": "integer"
+        }
+      ],
+      "return": {
+        "type": "integer"
+      }
+    },
+    "cacheVersion": 3
   }
 }

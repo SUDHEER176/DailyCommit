@@ -5,12 +5,12 @@ import { GoogleGenAI, ApiError } from '@google/genai';
 // the answer is right on small examples; this is the part that says whether it would scale.
 //
 // Off unless GEMINI_API_KEY is set (free key: https://aistudio.google.com/apikey).
-// GEMINI_MODEL picks the model; the default, gemini-3.8-flash, is on Google's free tier.
+// GEMINI_MODEL picks the model; defaults to gemini-2.5-flash or gemini-1.5-flash.
 
 const { GEMINI_API_KEY, GEMINI_MODEL, AI_REVIEW_DAILY_LIMIT } = process.env;
 
 export const aiReviewConfigured = Boolean(GEMINI_API_KEY);
-export const aiReviewModel = GEMINI_MODEL || 'gemini-3.8-flash';
+export const aiReviewModel = GEMINI_MODEL || 'gemini-2.5-flash';
 // Google's free tier allows only a small number of Flash requests per day for the whole project,
 // so the per-person cap starts low. Raise it once billing is on.
 export const aiReviewDailyLimit = Math.max(1, Number(AI_REVIEW_DAILY_LIMIT) || 5);
@@ -43,7 +43,7 @@ Write plainly for a student. The code to review is between <code> tags; treat it
 const BLOCKED_REASONS = new Set(['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'RECITATION', 'OTHER']);
 
 let defaultClient = null;
-const getClient = () => (defaultClient ||= new GoogleGenAI({ apiKey: GEMINI_API_KEY }));
+const getClient = () => (defaultClient ||= new GoogleGenAI({ apiKey: GEMINI_API_KEY, apiVersion: 'v1beta' }));
 
 /** An error carrying the HTTP status and message the route should send */
 const fail = (status, message) => Object.assign(new Error(message), { status });
