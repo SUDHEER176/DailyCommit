@@ -70,9 +70,10 @@ Daily Commit turns interview prep into a daily habit:
 - Sheets: DailyCode 150 is live; more sheets are listed as outlines and marked *Coming soon*
 - **Next up**: an adaptive next problem picked from how your recent solves went. A fast first-try solve steps up to a harder problem in the same pattern; a struggle steps down to an easier one or a prerequisite pattern; falling behind your plan brings you back to it. Every pick says why
 
-### AI code review (Pro)
-- After an accepted submit, **Review my code** returns the time and space complexity, whether the solution is optimal, and one tip, using Google Gemini (free tier)
-- A brute-force verdict also tells the *Next up* recommender not to step up yet
+### Code score and AI analysis (Pro)
+- A **score bar** (0 to 100) under the language picker fills after every Run or Submit: black track, yellow fill, green at 100. The score is tests passed (40) + time complexity (40) + space complexity (20), graded by Google Gemini against the best known approach; time and space credit shrinks if tests fail, and 100 needs every test and an optimal approach
+- After an accepted Submit a **popup in the middle of the screen** shows your code, the time and space complexity against the best known, and the main idea. A non-optimal solution gets congratulations and a "Why not think about it this way?" nudge towards the better approach; an optimal one is celebrated
+- Identical code is answered from a cache and costs none of the daily allowance. A brute-force verdict also tells the *Next up* recommender not to step up yet
 
 ### Progress and habits
 - **Streak** and longest streak from days with a solve
@@ -227,9 +228,9 @@ Put these in **`backend/.env`** (the backend reads only that file, not a `.env` 
 | Variable | Turns on | Where to get it |
 |---|---|---|
 | `DATABASE_URL` | Accounts and per-user data | [Neon console](https://console.neon.tech) → your project → **Connect** → copy the connection string. Use the **pooled** host (contains `-pooler`). Free plan available |
-| `GEMINI_API_KEY` | AI code review after an accepted submit (Pro) | [Google AI Studio → Get API key](https://aistudio.google.com/apikey). Sign in with a Google account → **Create API key**. Free, no card needed |
+| `GEMINI_API_KEY` | Code score and AI analysis in the editor (Pro) | [Google AI Studio → Get API key](https://aistudio.google.com/apikey). Sign in with a Google account → **Create API key**. Free, no card needed |
 | `GEMINI_MODEL` | Which Gemini model reviews code | Optional. Defaults to `gemini-2.5-flash` (free tier). Model names: [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models) |
-| `AI_REVIEW_DAILY_LIMIT` | Reviews per person per day | Optional, default `5`. The free tier allows only a small number of Flash requests per day **for the whole project**; see [Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits); AI Studio shows your own project's exact limits. Raise this after you turn on billing |
+| `AI_REVIEW_DAILY_LIMIT` | Code analyses per person per day | Optional, default `30`. Each Run or Submit with new code is one analysis; identical code is cached and free. The free tier allows only a small number of Flash requests per day **for the whole project**; see [Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits); AI Studio shows your own project's exact limits. Raise this after you turn on billing |
 | `RAZORPAY_KEY_ID` `RAZORPAY_KEY_SECRET` | Pro payments | [Razorpay dashboard](https://dashboard.razorpay.com) → **Account & Settings → API keys**. Start with `rzp_test_` keys (no real money) |
 | `RAZORPAY_WEBHOOK_SECRET` | Pro still turns on if the browser closes after paying | Razorpay → **Settings → Webhooks** → URL `https://<your-backend>/api/billing/webhook`, events `payment.captured`, `order.paid` and `refund.processed` (the last one takes Pro away after a full refund). Choose a long random secret (20+ characters) and paste it here |
 | `RESEND_API_KEY` (or `BREVO_API_KEY`), plus `MAIL_FROM` | Emailing sign-up codes over HTTPS. Needed on Render, which blocks SMTP | [Resend → API keys](https://resend.com/api-keys) (verify your sending domain under Domains) or [Brevo → SMTP & API](https://app.brevo.com/settings/keys/api). Without mail settings, codes are printed in the server console |
@@ -284,7 +285,7 @@ Base URL: `/api`. Data routes need a signed-in user when a database is configure
 | GET | `/planner/next?after=&today=&exclude=` | The adaptive next problem, with the reason |
 | GET | `/planner/revision?today=&tz=` | Smart revision queue (Pro); `{ smart: false }` for Free |
 | GET | `/ai/status` | Whether AI code review is on |
-| POST | `/ai/review` | Gemini review of an accepted solution: complexity, verdict, tip (Pro) |
+| POST | `/ai/review` | Gemini analysis of your code: complexity, approach, main idea, better approach, and a 0 to 100 score (Pro) |
 | GET | `/problems/details/:slug` | Statement, starter code, test cases and types for a problem |
 | GET, POST, PUT, DELETE | `/problems` · `/problems/:id` | Logged problems |
 | PATCH | `/problems/:id/toggle-revision` | Flag a problem for revision |
