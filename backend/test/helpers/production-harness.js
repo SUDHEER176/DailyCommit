@@ -41,10 +41,30 @@ export async function startProduction(envOverrides = {}) {
     else if (!String(args[0]).startsWith('[') && !String(args[0]).startsWith('\n[mail]') && !String(args[0]).startsWith('Backend')) realLog(...args);
   };
 
-  // Fake Razorpay's order API; everything else goes through
+  // Fake Gemini: tests set `gemini.analysis` (what the model "says") or `gemini.status` (an error code)
+  const gemini = {
+    calls: 0,
+    status: 200,
+    analysis: {
+      timeComplexity: 'O(n)', spaceComplexity: 'O(n)', bestKnownTime: 'O(n)', bestKnownSpace: 'O(n)',
+      timeGrade: 'optimal', spaceGrade: 'optimal', approach: 'Hash set', intuition: 'Remember what you have seen.', betterApproach: '',
+    },
+  };
+
+  // Fake Razorpay's order API and Gemini; everything else goes through
   const realFetch = globalThis.fetch;
   let orderCount = 0;
   globalThis.fetch = async (url, opts) => {
+    if (String(url).includes('generativelanguage.googleapis.com')) {
+      gemini.calls += 1;
+      if (gemini.status !== 200) {
+        return new Response(JSON.stringify({ error: { code: gemini.status, message: 'fake error', status: 'UNAVAILABLE' } }), { status: gemini.status, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response(JSON.stringify({
+        candidates: [{ content: { role: 'model', parts: [{ text: JSON.stringify(gemini.analysis) }] }, finishReason: 'STOP', index: 0 }],
+        modelVersion: 'fake-gemini',
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     if (String(url) === 'https://api.razorpay.com/v1/orders' && opts?.method === 'POST') {
       const body = JSON.parse(opts.body);
       return new Response(JSON.stringify({ id: `order_h${++orderCount}`, amount: body.amount, currency: body.currency }), { status: 200 });
@@ -80,7 +100,7 @@ export async function startProduction(envOverrides = {}) {
   };
 
   return {
-    call, signUp, webhook, codes, sql: run, sign,
+    call, signUp, webhook, codes, sql: run, sign, gemini,
     checkoutSignature: (orderId, paymentId) => sign(KEY_SECRET, `${orderId}|${paymentId}`),
     async stop() {
       console.log = realLog;
