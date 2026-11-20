@@ -714,12 +714,12 @@ export const api = {
   },
 
   /** → { success: true, data } or { success: false, status, error, upgrade } */
-  async reviewCode({ problemId, attemptId, title, difficulty, language, code }) {
+  async reviewCode({ problemId, attemptId, title, difficulty, language, code, passed, total, kind }) {
     try {
       const res = await apiFetch(`${API_BASE}/ai/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ problemId, attemptId, title, difficulty, language, code }),
+        body: JSON.stringify({ problemId, attemptId, title, difficulty, language, code, passed, total, kind }),
         signal: AbortSignal.timeout(120000), // the model takes a while to think
       });
       const json = await res.json().catch(() => ({}));

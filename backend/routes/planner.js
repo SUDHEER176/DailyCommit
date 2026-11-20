@@ -326,6 +326,7 @@ function cleanAttempt(body) {
     pastedChars: count(body.pastedChars, 1000000),
     selfRating: RATINGS.has(body.selfRating) ? body.selfRating : null,
     aiVerdict: AI_VERDICTS.has(body.aiVerdict) ? body.aiVerdict : null,
+    gaveUp: Boolean(body.gaveUp), // the person pressed "Suggest an easier problem"
   };
 }
 

@@ -166,6 +166,9 @@ test('attempts: sanitized, upserted by id, listed per problem', async () => {
   assert.deepEqual(first.json.data.languages, ['python']);
   assert.equal(first.json.data.pastedChars, 0);
   assert.equal(first.json.data.extra, undefined);
+  assert.equal(first.json.data.gaveUp, false, 'not stuck unless the person says so');
+  const stuck = await call('POST', '/planner/attempts', { id: 'stuck1', problemId: 'nc-3', gaveUp: true, runs: 1 });
+  assert.equal(stuck.json.data.gaveUp, true);
   await call('POST', '/planner/attempts', { id: 't1', problemId: 'nc-1', runs: 3, submits: 2, solved: true });
   const list = await call('GET', '/planner/attempts?problemId=nc-1');
   assert.equal(list.json.data.length, 1);

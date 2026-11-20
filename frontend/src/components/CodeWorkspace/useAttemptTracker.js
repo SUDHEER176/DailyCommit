@@ -41,11 +41,12 @@ function freshAttempt(problemId) {
     pastedChars: 0,
     selfRating: null,
     aiVerdict: null,
+    gaveUp: false,
   };
 }
 
 /** Opening a problem and reading it is not an attempt; only send once something happened */
-const worthSending = (a) => a.runs || a.submits || a.hintsViewed || a.videoOpened || a.selfRating;
+const worthSending = (a) => a.runs || a.submits || a.hintsViewed || a.videoOpened || a.selfRating || a.gaveUp;
 
 export function useAttemptTracker(problem) {
   const problemId = problem ? String(problem.id ?? problem.number ?? '') : '';
@@ -170,10 +171,19 @@ export function useAttemptTracker(problem) {
     return flush();
   }, [flush]);
 
+  // "Suggest an easier problem": the person says they're stuck. Saved right away, so the suggestion
+  // that follows is built from it.
+  const markGaveUp = useCallback(() => {
+    const a = attemptRef.current;
+    if (!a) return Promise.resolve(false);
+    a.gaveUp = true;
+    return flush();
+  }, [flush]);
+
   const getAttemptId = useCallback(() => attemptRef.current?.id || null, []);
 
   return {
     recordRun, recordSubmit, markHintsViewed, markVideoOpened, recordPaste, setSelfRating, selfRating,
-    recordAiVerdict, getAttemptId,
+    recordAiVerdict, getAttemptId, markGaveUp,
   };
 }

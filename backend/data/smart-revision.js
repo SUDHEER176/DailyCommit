@@ -46,7 +46,7 @@ export function bestAttemptSignal(list = [], difficulty) {
 /** How the first solve went (the earliest solved attempt, else the earliest with any signal) */
 export function firstAttemptSignal(list = [], difficulty) {
   const sorted = (Array.isArray(list) ? list : []).slice().sort((a, b) => timeOf(a) - timeOf(b));
-  const pick = sorted.find((a) => a.solved) || sorted.find((a) => a.submits || a.runs);
+  const pick = sorted.find((a) => a.solved) || sorted.find((a) => a.submits || a.runs || a.gaveUp);
   if (!pick) return null;
   const perf = attemptPerformance(pick, difficulty);
   return perf ? { performance: perf.performance, attempt: pick } : null;
@@ -71,7 +71,7 @@ export function struggleReason(q, signal) {
   if (q.solveStatus === 'hint') return 'Needed a hint';
   if (q.isDifficult) return 'Starred';
   const a = signal?.attempt;
-  if (a && !a.solved) return 'Not solved yet';
+  if (a && !a.solved) return a.gaveUp ? 'You got stuck' : 'Not solved yet';
   if (a?.aiVerdict === 'suboptimal') return 'Brute-force solution';
   if (a?.selfRating === 'hard') return 'You rated it hard';
   if (a?.videoOpened || a?.hintsViewed) return 'Used hints';
@@ -136,7 +136,7 @@ export function smartRevisionSchedule(plan, attempts = {}, today = dayString(day
   (plan?.days || []).flatMap((d) => d.questions || []).forEach((q) => {
     const signal = bestAttemptSignal(attempts[q.id], q.difficulty);
     const flagged = Boolean(q.isDifficult || q.solveStatus === 'hint' || q.solveStatus === 'solution');
-    const struggled = struggledWith(signal) && Boolean(q.completed || signal.attempt?.solved || signal.attempt?.submits);
+    const struggled = struggledWith(signal) && Boolean(q.completed || signal.attempt?.solved || signal.attempt?.submits || signal.attempt?.gaveUp);
     if (!flagged && !struggled) return;
 
     const anchorIso = q.completedAt || addedAt[q.id] || signal?.attempt?.solvedAt || signal?.attempt?.lastActiveAt;
@@ -170,7 +170,7 @@ export function smartRevisionSchedule(plan, attempts = {}, today = dayString(day
     const reviews = Array.isArray(done.reviews) ? done.reviews : [];
     const signal = firstAttemptSignal(list, problem.difficulty);
     // Once a review has been done the problem stays on the queue, even if that review went well
-    const struggled = struggledWith(signal) && Boolean(signal.attempt?.solved || signal.attempt?.submits);
+    const struggled = struggledWith(signal) && Boolean(signal.attempt?.solved || signal.attempt?.submits || signal.attempt?.gaveUp);
     if (!struggled && reviews.length === 0) return;
 
     const anchorIso = signal?.attempt?.solvedAt || signal?.attempt?.lastActiveAt;

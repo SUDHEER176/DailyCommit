@@ -31,7 +31,9 @@ import { clearlyOtherLanguage } from '../../services/execution/languageCheck';
 import { api } from '../../services/api';
 import { useAttemptTracker } from './useAttemptTracker';
 import NextUpCard, { useNextProblem } from '../practice/NextUpCard';
-import AiReviewPanel from './AiReviewPanel';
+import ScoreBar from './ScoreBar';
+import ScoreModal from './ScoreModal';
+import { useCodeScore } from './useCodeScore';
 
 const SUPPORTED_LANGUAGES = [
   { id: 'javascript', label: 'JavaScript (Node.js)', monacoLang: 'javascript' },
@@ -142,9 +144,17 @@ export default function CodeWorkspace({
   // Bumped only once the attempt is saved, so the suggestion reflects it.
   const [historyVersion, setHistoryVersion] = useState(0);
   const bumpHistory = () => setHistoryVersion((v) => v + 1);
-  // Counts accepted submits; a new one clears the previous code review
-  const [acceptedCount, setAcceptedCount] = useState(0);
-  useEffect(() => { setHistoryVersion(0); }, [problem?.id]);
+  // The code score bar, and the centred popup shown after an accepted Submit (or from the bar's Details)
+  const score = useCodeScore({ problem, language, getAttemptId: attempt.getAttemptId });
+  const [scoreModal, setScoreModal] = useState(null); // { result, variant: 'optimal' | 'solved' | 'details' }
+  useEffect(() => { setScoreModal(null); }, [problem?.id]);
+  // The "Stuck? Suggest an easier problem" card, opened by the person after a Run or Submit that failed
+  const [stuckOpen, setStuckOpen] = useState(false);
+  useEffect(() => { setHistoryVersion(0); setStuckOpen(false); }, [problem?.id]);
+  const askForEasier = () => {
+    setStuckOpen(true);
+    attempt.markGaveUp().then(bumpHistory);
+  };
   const next = useNextProblem({
     after: problem?.id,
     refreshKey: historyVersion,
@@ -275,6 +285,9 @@ export default function CodeWorkspace({
         type: 'run',
         ...res
       });
+      // Score the code in the background; the bar fills in when the analysis arrives
+      const ranCases = res.results || [];
+      score.analyze({ kind: 'run', passed: ranCases.filter((r) => r.passed).length, total: ranCases.length, verdict: res.verdict, code });
     } catch (err) {
       setExecutionResult({
         type: 'run',
@@ -311,7 +324,18 @@ export default function CodeWorkspace({
         ...res
       });
       attempt.recordSubmit(language, res).then(() => { if (res.success) bumpHistory(); });
-      if (res.success) setAcceptedCount((c) => c + 1);
+      const submittedCases = res.results || [];
+      score.analyze({ kind: 'submit', passed: submittedCases.filter((r) => r.passed).length, total: submittedCases.length, verdict: res.verdict, code })
+        .then((done) => {
+          if (!done || !res.success) return;
+          // Accepted: say how it did in the middle of the screen, and keep the verdict for Next up
+          const optimal = done.score.score === 100;
+          setScoreModal({ result: done, variant: optimal ? 'optimal' : 'solved' });
+          if (optimal) {
+            confetti({ particleCount: 140, spread: 80, origin: { y: 0.5 }, colors: ['#34d399', '#facc15', '#ffffff'], disableForReducedMotion: true });
+          }
+          attempt.recordAiVerdict(done.analysis.verdict).then(bumpHistory);
+        });
 
       if (res.success) {
         // Trigger celebratory confetti
@@ -377,6 +401,16 @@ export default function CodeWorkspace({
 
   return (
     <div className={`flex flex-col bg-ink-900 text-slate-100 ${isFullscreen ? 'fixed inset-0 z-50' : 'h-[calc(100vh-64px)] min-h-[640px]'}`}>
+      {/* After an accepted Submit: the score, complexity, main idea and a better way to think about it */}
+      {scoreModal && (
+        <ScoreModal
+          result={scoreModal.result}
+          variant={scoreModal.variant}
+          problemTitle={problem.title}
+          onClose={() => setScoreModal(null)}
+        />
+      )}
+
       {/* Top bar */}
       <div className="h-12 px-2 border-b border-white/[0.08] flex items-center justify-between flex-shrink-0">
         <button
@@ -538,6 +572,16 @@ export default function CodeWorkspace({
                     </div>
                   </div>
 
+                  {score.enabled && (
+                    <ScoreBar
+                      state={score.state}
+                      onDetails={() => score.state.analysis && setScoreModal({
+                        result: { analysis: score.state.analysis, score: score.state.parts, code: score.state.code },
+                        variant: 'details',
+                      })}
+                    />
+                  )}
+
                   <div className="flex-1 overflow-hidden">
                     <Editor
                       height="100%"
@@ -696,20 +740,26 @@ export default function CodeWorkspace({
                             </div>
                           )}
 
-                          {executionResult.type === 'submit' && executionResult.success && (
-                            <AiReviewPanel
-                              problem={problem}
-                              language={language}
-                              code={code}
-                              submitKey={acceptedCount}
-                              attemptId={attempt.getAttemptId()}
-                              onVerdict={(verdict) => attempt.recordAiVerdict(verdict).then(bumpHistory)}
-                            />
-                          )}
-
                           {executionResult.type === 'submit' && executionResult.success && onOpenProblem && (
                             <div className="mt-4">
                               <NextUpCard compact rec={next.rec} loading={next.loading} onOpen={onOpenProblem} onSkip={next.skip} />
+                            </div>
+                          )}
+
+                          {/* Couldn't get it? Say so and get an easier problem to build up with */}
+                          {!executionResult.success && onOpenProblem && (
+                            <div className="mt-4">
+                              {stuckOpen ? (
+                                <NextUpCard compact rec={next.rec} loading={next.loading} onOpen={onOpenProblem} onSkip={next.skip} />
+                              ) : (
+                                <p className="text-[13px] text-slate-400">
+                                  Stuck on this one?{' '}
+                                  <button type="button" onClick={askForEasier}
+                                    className="text-white underline underline-offset-4 decoration-white/30 hover:decoration-white rounded-sm">
+                                    Suggest an easier problem
+                                  </button>
+                                </p>
+                              )}
                             </div>
                           )}
 

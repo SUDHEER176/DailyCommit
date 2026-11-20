@@ -151,6 +151,22 @@ test('a solve with a wrong first try, hints and a Hard rating is not praised as 
   assert.notEqual(rec.problem.id, 'nc-128', 'the harder follow-up waits for a strong solve');
 });
 
+test('saying "stuck" with no submit at all steps down to an easier problem in the same pattern', () => {
+  const attempts = attemptsOf({ id: 'g', problemId: 'nc-128', runs: 1, submits: 0, solved: false, gaveUp: true, lastActiveAt: '2026-11-18T12:00:00Z' });
+  const rec = recommendNext({ problems, graph, attempts, afterId: 'nc-128', today: TODAY });
+  assert.ok(['step-down', 'reinforce', 'revisit'].includes(rec.kind), rec.kind);
+  assert.equal(byId.get(rec.problem.id).difficulty, 'Easy');
+  assert.equal(graph.problems[rec.problem.id].pattern, 'hash-lookup');
+});
+
+test('opening a problem, running the sample once and leaving says nothing; real effort or "stuck" does', () => {
+  assert.equal(attemptPerformance({ solved: false, runs: 1, submits: 0, activeSeconds: 30 }, 'Easy'), null);
+  assert.equal(attemptPerformance({ solved: false, runs: 0, submits: 0, activeSeconds: 600 }, 'Easy'), null);
+  assert.ok(attemptPerformance({ solved: false, runs: 4, submits: 0, activeSeconds: 600 }, 'Easy'), 'ten minutes and several runs is a real attempt');
+  assert.ok(attemptPerformance({ solved: false, runs: 0, submits: 2, activeSeconds: 40 }, 'Easy'), 'failed submits count');
+  assert.deepEqual(attemptPerformance({ solved: false, runs: 0, submits: 0, gaveUp: true }, 'Easy'), { performance: 0.1, weight: 1 });
+});
+
 test('never suggests a pattern whose prerequisites are untouched', () => {
   // Strong on hash lookups; k-sum (3Sum) also needs two pointers, which hasn't been touched
   const attempts = attemptsOf(solvedAttempt('nc-217'), solvedAttempt('nc-242'), solvedAttempt('nc-1'), solvedAttempt('nc-49'), solvedAttempt('nc-36'), solvedAttempt('nc-128'), solvedAttempt('nc-2013'));

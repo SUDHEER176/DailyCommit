@@ -5,7 +5,7 @@ _Audited against the code on 2026-11-18. File and line references point at the c
 ## TL;DR
 
 - **Payments work.** A signed-in user can buy Pro through Razorpay, the payment is verified on the server, and the account becomes Pro for 30 or 365 days.
-- **Pro now unlocks one real feature: AI code review** after an accepted submit (`POST /api/ai/review`, guarded by `requirePro`). The other five lines on the pricing page are still *Soon*.
+- **Pro now unlocks one real feature: AI code score and analysis** on every Run and Submit (`POST /api/ai/review`, guarded by `requirePro`). The other five lines on the pricing page are still *Soon*.
 - **Pricing bug:** the yearly plan costs **₹1** on the server (`amount: 100` paise). Fix this before taking live payments.
 
 ---
@@ -101,11 +101,11 @@ sequenceDiagram
 - [x] `plan` / `proUntil` on the user object
 - [x] Backend `requirePro` middleware in `backend/data/billing.js` (402 with `upgrade: true` for Free accounts; open in file mode)
 - [ ] Frontend `isPro(user)` helper (e.g. in `lib/userData.js`, next to `isSignedIn`)
-- [x] Upsell on a 402: the code review panel shows "Code review is part of Pro" with a link to `/pricing` (`AiReviewPanel.jsx`)
+- [x] Upsell on a 402: the score bar shows "AI scoring is part of Pro" with a link to `/pricing` (`ScoreBar.jsx`)
 - [x] First gated feature: AI code review
 
 ### Pro features
-- [x] **AI code review** after an accepted submit: time and space complexity, verdict (optimal / acceptable / suboptimal), one tip. Google Gemini (`gemini-3.8-flash`, free tier) via `@google/genai` with a JSON-schema response (`backend/data/ai-review.js`), capped per person per day, off without `GEMINI_API_KEY`. The verdict also feeds the next-problem recommender.
+- [x] **AI code score and analysis**: a 0-100 bar after every Run/Submit (tests 40 + time 40 + space 20, graded by Gemini against the best known approach), and a centred popup after an accepted Submit with the code, time and space complexity, the main idea and, when not optimal, a better way to think about it. `backend/data/ai-review.js`, `code-score.js`, `routes/ai.js`; analyses are cached by code hash and limited per person per day. Off without `GEMINI_API_KEY`. The verdict also feeds the next-problem recommender
 
 Still marked *Soon* on the pricing page:
 - [ ] **Company-wise sheets.** Sheet cards exist in `PracticeHub.jsx:103-225`, but only DailyCode 150 is `live: true`. There is no company tagging data.

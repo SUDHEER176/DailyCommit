@@ -34,7 +34,7 @@ export function buildProgress({ problems = [], plan = null, attempts = {}, today
   const solved = solvedProblems(plan, attempts);
   const todayIndex = dayFromString(today);
   const byId = new Map(problems.map((p) => [p.id, p]));
-  const touched = (id) => (Array.isArray(attempts[id]) ? attempts[id] : []).some((a) => a.solved || a.submits || a.runs);
+  const touched = (id) => (Array.isArray(attempts[id]) ? attempts[id] : []).some((a) => a.solved || a.submits || a.runs || a.gaveUp);
 
   const topics = new Map();
   const byDifficulty = { Easy: { solved: 0, total: 0 }, Medium: { solved: 0, total: 0 }, Hard: { solved: 0, total: 0 } };
