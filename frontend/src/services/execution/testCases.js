@@ -51,8 +51,10 @@ export function parseValue(raw) {
 export function parseInputs(input) {
   const text = decodeEntities(input).trim();
   if (/^[A-Za-z_]\w*\s*=/.test(text)) {
-    // Named: split before each "name =" at the top level
-    const pieces = splitTopLevel(text.replace(/\n/g, ', '));
+    // Named: split before each "name =" at the top level. A line break separates two inputs only when
+    // the next line starts with "name ="; otherwise it is inside a value (Valid Sudoku's board spans lines)
+    const joined = text.replace(/\s*\n(?=\s*[A-Za-z_]\w*\s*=)/g, ', ').replace(/\s*\n\s*/g, '');
+    const pieces = splitTopLevel(joined);
     const named = [];
     pieces.forEach((piece) => {
       const m = piece.match(/^([A-Za-z_]\w*)\s*=\s*([\s\S]*)$/);
