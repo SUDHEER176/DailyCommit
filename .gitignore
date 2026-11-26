@@ -6,3 +6,9 @@ node_modules
 
 # Testing-mode data (APP_MODE=testing)
 backend/data/testing-db.json
+
+# Build output: Vercel builds the frontend itself
+frontend/dist/
+
+# Large media kept out of git
+*.mp4

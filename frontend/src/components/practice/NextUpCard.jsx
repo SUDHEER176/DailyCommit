@@ -58,7 +58,7 @@ export default function NextUpCard({ rec, loading, onOpen, onSkip, compact = fal
   if (!rec?.problem) {
     if (compact) return null;
     return (
-      <section className="rounded-2xl border border-white/[0.08] bg-ink-850 p-6">
+      <section className="rounded-2xl border border-white/[0.08] bg-ink-850 p-6 h-full">
         <p className="text-xs text-slate-500">Next up</p>
         <p className="mt-2 text-[15px] text-white">You’ve solved every problem in the list</p>
         <p className="mt-1 text-[13px] text-slate-400">Your revision queue keeps them fresh</p>
@@ -69,7 +69,7 @@ export default function NextUpCard({ rec, loading, onOpen, onSkip, compact = fal
   const { problem, kind, reason, patternName } = rec;
   return (
     <section
-      className={`rounded-2xl border border-white/[0.08] bg-ink-850 flex flex-col md:flex-row md:items-center justify-between gap-4 ${compact ? 'p-4' : 'p-6'}`}
+      className={`rounded-2xl border border-white/[0.08] bg-ink-850 flex flex-col md:flex-row md:items-center justify-between gap-4 ${compact ? 'p-4' : 'p-6 h-full'}`}
       aria-labelledby="next-up-title"
     >
       <div className="min-w-0 space-y-2">

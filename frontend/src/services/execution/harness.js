@@ -124,7 +124,8 @@ export function assembleResult({ problem, testCases, caseOutputs = [], runError 
     const out = { ...raw, output: normaliseNodeOutput(raw.output, tc.expected, spec?.returnKind) };
     const expected = displayExpected(tc.expected);
     const error = out.error || (out.output === undefined ? (runError || 'Did not run') : null);
-    const passed = !error && answersMatch(out.output, tc.expected, { anyOrder });
+    // A case can allow any order itself (hidden tests for problems whose statement doesn't say so)
+    const passed = !error && answersMatch(out.output, tc.expected, { anyOrder: anyOrder || Boolean(tc.anyOrder) });
     return {
       testCaseIndex: i + 1,
       input: tc.input,

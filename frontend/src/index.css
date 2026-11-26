@@ -347,3 +347,74 @@ html.light .btn-primary-glow .text-white {
 /* Horizontal scrollers (tab rails) without a visible scrollbar */
 .scrollbar-none { scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* Problem statements from LeetCode: one quiet style for prose, examples and constraints */
+.problem-content-html {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+.problem-content-html p { margin: 0 0 12px; }
+.problem-content-html strong,
+.problem-content-html b { color: var(--text); font-weight: 500; }
+.problem-content-html em,
+.problem-content-html i { font-style: normal; color: var(--text); }
+.problem-content-html strong.example {
+  display: block;
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--text);
+}
+.problem-content-html pre,
+.problem-content-html .example-block {
+  margin: 8px 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--page);
+  font-family: 'Geist Mono', ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+.problem-content-html .example-block p { margin: 0; }
+.problem-content-html pre strong,
+.problem-content-html .example-block strong {
+  display: inline-block;
+  min-width: 88px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.problem-content-html code {
+  font-family: 'Geist Mono', ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+  padding: 0;
+}
+.problem-content-html pre code { color: inherit; }
+.problem-content-html sup { font-size: 0.7em; line-height: 0; vertical-align: super; }
+.problem-content-html ul,
+.problem-content-html ol { margin: 8px 0 16px; padding-left: 20px; }
+.problem-content-html ul { list-style: disc; }
+.problem-content-html ol { list-style: decimal; }
+.problem-content-html li { margin: 4px 0; padding-left: 4px; }
+.problem-content-html li::marker { color: var(--text-3); }
+.problem-content-html img {
+  max-width: 100%;
+  margin: 16px 0;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+}
+/* A paragraph that is only a bold label, like Constraints, opens a new group */
+.problem-content-html p:has(> strong:only-child) { margin-top: 24px; margin-bottom: 8px; font-size: 13px; }
+
+/* The code analysis panel enters from the right */
+@keyframes panelIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.panel-in { animation: panelIn 220ms var(--ease) both; }
+@media (prefers-reduced-motion: reduce) { .panel-in { animation: none; } }

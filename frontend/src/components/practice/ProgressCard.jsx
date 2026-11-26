@@ -48,14 +48,14 @@ export default function ProgressCard({ data, streak = 0, revisionsDue = 0, onUpg
     <section className="rounded-2xl border border-white/[0.08] bg-ink-850 p-6 space-y-5" aria-labelledby="progress-title">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="progress-title" className="text-[15px] font-medium text-white">Your progress</h2>
-        <span className="font-mono text-xs tabular-nums text-slate-500">{solved} of {total} solved · {remaining} to go</span>
+        <span className="font-mono text-xs tabular-nums text-slate-500">{solved} of {total} solved</span>
       </div>
 
       <Bar value={solved} total={total} />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
         <Stat label="Solved today" value={solvedToday} />
-        <Stat label="Day streak" value={streak} />
+        <Stat label="Left to solve" value={remaining} />
         <Stat label="Topics started" value={`${topicsStarted}/${topicsTotal}`} />
         <Stat label="Revisions due" value={revisionsDue} />
       </div>

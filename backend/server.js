@@ -1,4 +1,5 @@
 import 'dotenv/config'; // must stay first: loads DATABASE_URL before the store connects
+import { monitoringOn, setupErrorHandling } from './data/monitoring.js'; // second: Sentry starts before Express loads
 import { pathToFileURL } from 'url';
 import express from 'express';
 import cors from 'cors';
@@ -70,6 +71,9 @@ app.get('/api/health', async (req, res) => {
   res.json(body);
 });
 
+// Errors that reach Express go to Sentry (when on) and come back as JSON
+setupErrorHandling(app);
+
 /** Start the API. Resolves with the HTTP server once it is listening. */
 export async function start() {
   if (isProduction && !pool) {
@@ -108,6 +112,7 @@ export async function start() {
     console.log(aiReviewConfigured
       ? `[ai] Code review on (${aiReviewModel})`
       : '[ai] Code review off, set GEMINI_API_KEY to enable (free key: https://aistudio.google.com/apikey)');
+    console.log(monitoringOn ? '[monitoring] Sentry on, errors are reported' : '[monitoring] Sentry off, set SENTRY_DSN to report errors');
     if (isProduction && !corsOrigins.length) {
       console.warn('[cors] CORS_ORIGINS is not set, so any website can call this API from a browser. Set it to your site, e.g. CORS_ORIGINS=https://yourdomain.com');
     }

@@ -28,7 +28,7 @@ jobs:
         run: npm test
 
   frontend:
-    name: Frontend build
+    name: Frontend tests and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +40,10 @@ jobs:
       - name: Install
         working-directory: frontend
         run: npm ci
+      # The runner tests compile and run real solutions; ubuntu-latest has python3, g++ and java
+      - name: Test
+        working-directory: frontend
+        run: npm test
       - name: Build
         working-directory: frontend
         run: npx vite build --outDir "$RUNNER_TEMP/dist" --emptyOutDir

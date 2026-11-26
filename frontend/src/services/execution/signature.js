@@ -67,7 +67,8 @@ function typed(code, language) {
     const name = pm?.[2] || p;
     return { name, type, kind: kindOf(type, name) };
   });
-  const ret = m[1].replace(/\s+/g, ' ').trim();
+  // The match can start before an access label ("public:\n    void f(..."); the label isn't part of the type
+  const ret = m[1].replace(/\b(?:public|private|protected)\s*:/g, ' ').replace(/\s+/g, ' ').trim();
   return { name: m[2], params, returnType: ret, returnsVoid: ret === 'void' };
 }
 
