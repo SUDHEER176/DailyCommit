@@ -20,7 +20,7 @@ import {
  * This component owns all plan state and the API calls that change it.
  * The tab components only render and call the `actions` passed to them.
  */
-export default function PersonalizedPlannerView({ onOpenWizardDirect = false }) {
+export default function PersonalizedPlannerView({ onOpenWizardDirect = false, prefill = null }) {
   // ── Plan data ──
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -308,6 +308,7 @@ export default function PersonalizedPlannerView({ onOpenWizardDirect = false }) 
         onClose={() => setIsWizardOpen(false)}
         onPlanGenerated={handlePlanGenerated}
         currentConfig={plan?.config}
+        prefill={prefill}
         solvedIds={allQuestions.filter((q) => q.completed).map((q) => q.id)}
       />
     </div>

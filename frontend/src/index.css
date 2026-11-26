@@ -418,3 +418,185 @@ html.light .btn-primary-glow .text-white {
 }
 .panel-in { animation: panelIn 220ms var(--ease) both; }
 @media (prefers-reduced-motion: reduce) { .panel-in { animation: none; } }
+
+/* Landing page paper cards: a sheet of paper taped to the panel, slightly turned */
+.paper {
+  position: relative;
+  background: #fbfaf6;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 6px 10px 8px 12px;
+  box-shadow: 0 18px 32px -20px rgba(11, 13, 20, 0.35);
+}
+html.dark .paper {
+  background: #161922;
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 18px 32px -16px rgba(0, 0, 0, 0.6);
+}
+.tape {
+  position: absolute;
+  top: -10px;
+  left: 18px;
+  width: 64px;
+  height: 18px;
+  border-radius: 2px;
+  transform: rotate(-32deg);
+  opacity: 0.85;
+  background: var(--tape, #c9e4c5);
+}
+html.dark .tape { opacity: 0.7; }
+/* A marker stroke under a handwritten figure */
+.marker {
+  background-image: linear-gradient(transparent 62%, rgba(0, 102, 255, 0.35) 62%, rgba(0, 102, 255, 0.35) 92%, transparent 92%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+/* The navbar narrowing into its glass pill on scroll (Navbar.jsx) */
+.nav-bar {
+  transition-property: max-width, height, background-color, border-color, box-shadow;
+  transition-duration: 320ms;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+@media (prefers-reduced-motion: reduce) { .nav-bar { transition-duration: 0.01ms; } }
+
+/* Landing background: squared-paper lines behind the whole page, 48px apart. The layer spans
+   the window's width (the page column is narrower) and fades out at the sides and bottom */
+.landing-grid {
+  position: absolute;
+  z-index: -1;
+  top: -6rem;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(17, 24, 39, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(17, 24, 39, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center top;
+  /* Soft at the top edge too, so the grid never starts with a hard line */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 160px), radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent, #000 160px), radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  mask-composite: intersect;
+}
+html.dark .landing-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+}
+
+/* Landing layout: panels run edge to edge, their content stays in a 1280px column */
+.land-col { width: 100%; max-width: 80rem; margin-inline: auto; }
+/* The hero fills the first screen under the navbar (~72px) and the page's top padding (32px) */
+.hero-screen { min-height: calc(100svh - 6.5rem); }
+
+/* Landing scroll reveal (landing/ink.jsx): a section's panel fades in as it scrolls into view,
+   then its cards fade from see-through and rise 16px into place, one after another. Once only */
+.reveal:not([data-shown]), .reveal:not([data-shown]) [data-rv] { opacity: 0; }
+/* The rise uses `translate`, so a card's own hover transform still works after it lands */
+.reveal:not([data-shown]) [data-rv] { translate: 0 16px; }
+@keyframes rvPanel { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rvCard {
+  from { opacity: 0; translate: 0 16px; }
+  to { opacity: 1; translate: 0 0; }
+}
+.reveal[data-shown] { animation: rvPanel 420ms var(--ease) both; }
+.reveal[data-shown] [data-rv] {
+  animation: rvCard 560ms cubic-bezier(0.22, 1, 0.36, 1) calc(140ms + min(var(--rv, 0), 8) * 80ms) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal [data-rv] { animation: none !important; opacity: 1 !important; translate: none !important; }
+}
+
+/* Landing ink: handwriting writes itself onto a sheet once it scrolls into view (landing/ink.jsx) */
+.ink {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+.ink-text {
+  display: inline-block;
+  max-width: 100%;
+  clip-path: inset(-0.25em -0.3em -0.35em -0.25em);
+}
+.ink::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0.15em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+.ink-sheet:not([data-written]) .ink-text { clip-path: inset(-0.25em 100% -0.35em -0.25em); }
+.ink-sheet:not([data-written]) .ink-fade { opacity: 0; }
+.ink-sheet:not([data-written]) .marker { background-size: 0% 100%; }
+.ink-sheet:not([data-written]) .ink-circle { stroke-dashoffset: 1; }
+
+@keyframes inkWrite {
+  from { clip-path: inset(-0.25em 100% -0.35em -0.25em); }
+  to { clip-path: inset(-0.25em -0.3em -0.35em -0.25em); }
+}
+@keyframes inkPen {
+  0% { left: 0; opacity: 0; }
+  8% { opacity: 0.9; }
+  88% { opacity: 0.9; }
+  100% { left: 100%; opacity: 0; }
+}
+@keyframes inkFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes inkMarker {
+  from { background-size: 0% 100%; }
+  to { background-size: 100% 100%; }
+}
+@keyframes inkCircle {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+/* A pen doesn't move at one speed: quick start, slower through the middle, quick finish */
+.ink-sheet[data-written] .ink-text {
+  animation: inkWrite var(--dur, 0.6s) cubic-bezier(0.3, 0.15, 0.55, 0.95) calc(var(--base, 0s) + var(--at, 0s)) both;
+}
+.ink-sheet[data-written] .ink::after {
+  animation: inkPen var(--dur, 0.6s) cubic-bezier(0.3, 0.15, 0.55, 0.95) calc(var(--base, 0s) + var(--at, 0s)) both;
+}
+.ink-sheet[data-written] .ink-fade {
+  animation: inkFade 420ms var(--ease) calc(var(--base, 0s) + var(--at, 0s)) both;
+}
+.ink-sheet[data-written] .marker {
+  animation: inkMarker 520ms cubic-bezier(0.5, 0, 0.3, 1) calc(var(--base, 0s) + var(--marker-at, 0.8s)) both;
+}
+.ink-sheet[data-written] .ink-circle {
+  animation: inkCircle 650ms cubic-bezier(0.45, 0, 0.25, 1) calc(var(--base, 0s) + var(--at, 0s)) both;
+}
+.ink-circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+/* The hero cards write one after another on wider screens; stacked on a phone, each starts when it shows */
+.ink-stagger { --base: 0s; }
+@media (min-width: 640px) { .ink-stagger { --base: calc(var(--i, 0) * 0.3s); } }
+@media (prefers-reduced-motion: reduce) {
+  .ink-sheet .ink-text, .ink-sheet .ink-fade, .ink-sheet .marker, .ink-sheet .ink-circle, .ink-sheet .ink::after {
+    animation: none !important;
+  }
+  .ink-sheet .ink-text { clip-path: none !important; }
+  .ink-sheet .ink-fade { opacity: 1 !important; }
+  .ink-sheet .marker { background-size: 100% 100% !important; }
+  .ink-sheet .ink-circle { stroke-dashoffset: 0 !important; }
+  .ink::after { display: none; }
+}
+
+/* Text on a dark button stays white in the light theme (html.light .text-white turns text dark) */
+html.light .on-dark { color: #ffffff; }

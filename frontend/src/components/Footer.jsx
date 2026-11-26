@@ -8,10 +8,11 @@ const NAV_LINKS = {
     { label: 'Overview', href: '#overview' },
     { label: 'Practice hub', href: '#explore' },
     { label: 'Pricing', href: '#pricing' },
-    { label: 'Features', href: '#features' },
+    { label: 'Sheets', href: '#sheets' },
     { label: "Today's plan", href: '#today-plan' },
     { label: 'How it works', href: '#how-it-works' },
-    { label: 'Integrations', href: '#integrations' },
+    { label: 'Topics', href: '#topics' },
+    { label: 'Free vs Pro', href: '#compare' },
     { label: 'FAQ', href: '#faqs' },
   ],
   Resources: [
@@ -27,7 +28,7 @@ const NAV_LINKS = {
   ],
 };
 
-export default function Footer({ setActiveTab, onNavigate }) {
+export default function Footer({ setActiveTab, onNavigate, signedIn = false }) {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
@@ -100,7 +101,7 @@ export default function Footer({ setActiveTab, onNavigate }) {
                   <button
                     id="footer-newsletter-submit"
                     type="submit"
-                    className="h-10 px-4 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-ink-900 text-sm font-medium hover:bg-slate-700 dark:hover:bg-white transition-colors active:scale-[0.98]"
+                    className="on-dark h-10 px-4 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-ink-900 text-sm font-medium hover:bg-slate-700 dark:hover:bg-white transition-colors active:scale-[0.98]"
                   >
                     Subscribe
                   </button>
@@ -123,7 +124,7 @@ export default function Footer({ setActiveTab, onNavigate }) {
             <div key={group} className="md:col-span-2">
               <h3 className="text-[13px] text-slate-500">{group}</h3>
               <ul className="mt-4 space-y-2">
-                {links.map((link) => (
+                {links.filter((link) => signedIn || link.href !== '#today-plan').map((link) => (
                   <li key={link.label}>
                     <a
                       href={link.href}
