@@ -1,61 +1,84 @@
 import React from 'react';
+import { ChevronRight, Loader2 } from 'lucide-react';
 
-// The code score bar: a black track with a yellow fill that grows with the score, and turns green
-// at 100. The numbers under it say where the points came from.
+// The code score as a pill in the editor header: hidden until the first Run or Submit, then a
+// small ring that fills with the score (amber under 50, blue above, green at 100). Clicking it
+// opens the analysis. The breakdown is in the tooltip and in the details popup.
 
-const fillClass = (score) =>
-  score >= 100 ? 'bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.65)]' : score >= 50 ? 'bg-yellow-400' : 'bg-amber-500';
+const ringColor = (score) => (score >= 100 ? '#34d399' : score >= 50 ? '#0066ff' : '#f59e0b');
 
-function hintFor(state) {
-  const { phase, score, kind, parts, note } = state;
-  if (phase === 'analyzing') return 'Analyzing your code…';
-  if (phase === 'done') {
-    if (score === null) return 'No test results to score yet';
-    if (score >= 100) return kind === 'run' ? 'Looks optimal. Submit to finish' : 'Optimal solution';
+function describe(state) {
+  const { phase, score, parts, note } = state;
+  if (phase === 'analyzing') return 'Scoring tests, time and space';
+  if (phase === 'done' && parts && score != null) {
     return `Tests ${parts.tests}/${parts.max.tests} · Time ${parts.time}/${parts.max.time} · Space ${parts.space}/${parts.max.space}`;
   }
-  if (phase === 'skipped' || phase === 'locked' || phase === 'unavailable') return note;
-  return 'Run or submit to score your code on tests, time and space';
+  return note || '';
+}
+
+function Ring({ value }) {
+  const r = 6;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden className="-rotate-90 flex-shrink-0">
+      <circle cx="8" cy="8" r={r} fill="none" stroke="var(--hairline-strong)" strokeWidth="2" />
+      <circle
+        cx="8" cy="8" r={r} fill="none" stroke={ringColor(value)} strokeWidth="2" strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={c * (1 - value / 100)}
+        style={{ transition: 'stroke-dashoffset 500ms var(--ease), stroke 500ms var(--ease)' }}
+      />
+    </svg>
+  );
 }
 
 export default function ScoreBar({ state, onDetails }) {
-  const value = Math.max(0, Math.min(100, Math.round(state.score ?? 0)));
+  if (!state || state.phase === 'idle') return null;
   const analyzing = state.phase === 'analyzing';
+  const value = Math.max(0, Math.min(100, Math.round(state.score ?? 0)));
+  const canOpen = state.phase === 'done' && Boolean(state.analysis);
+  const tip = describe(state);
+
+  const body = (
+    <>
+      {analyzing ? (
+        <Loader2 className="w-4 h-4 text-slate-500 animate-spin" strokeWidth={1.5} aria-hidden />
+      ) : (
+        <Ring value={value} />
+      )}
+      {analyzing ? (
+        <span>Scoring</span>
+      ) : (
+        <>
+          <span className="font-mono tabular-nums text-white">{value}</span>
+          <span>{state.phase === 'done' ? 'score' : state.phase === 'locked' ? 'tests only' : 'score'}</span>
+        </>
+      )}
+      {canOpen && <ChevronRight className="w-3.5 h-3.5 -mr-0.5" strokeWidth={1.5} aria-hidden />}
+    </>
+  );
+
+  const pill = 'h-7 pl-2 pr-2.5 inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] text-xs text-slate-500';
 
   return (
-    <div className="px-4 py-2 border-b border-white/[0.08] bg-ink-850 flex-shrink-0">
-      <div className="flex items-center gap-3">
-        <span className="text-xs text-slate-500 flex-shrink-0">Code score</span>
-        <div
-          role="progressbar"
-          aria-label="Code score"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={value}
-          className={`relative flex-1 h-2 rounded-full bg-black border border-white/[0.14] overflow-hidden ${analyzing ? 'animate-pulse' : ''}`}
+    <span className="inline-flex items-center gap-2" aria-live="polite">
+      {canOpen ? (
+        <button
+          type="button"
+          onClick={onDetails}
+          title={tip}
+          aria-label={`Code score ${value} of 100. ${tip}. Open the analysis`}
+          className={`${pill} hover:border-white/[0.14] hover:text-slate-300 transition-colors`}
         >
-          <div
-            className={`h-full rounded-full transition-[width,background-color] duration-700 ease-out ${fillClass(value)}`}
-            style={{ width: `${value}%` }}
-          />
-        </div>
-        <span className="w-14 flex-shrink-0 text-right font-mono text-xs tabular-nums text-white">{value}/100</span>
-      </div>
-
-      <div className="mt-1 min-h-[16px] flex items-center justify-between gap-3 text-[11px] text-slate-500">
-        <span aria-live="polite">
-          {hintFor(state)}
-          {state.phase === 'locked' && (
-            <> · <a href="/pricing" className="text-brand-400 hover:text-brand-300 underline underline-offset-2">See Pro</a></>
-          )}
+          {body}
+        </button>
+      ) : (
+        <span className={pill} title={tip} role="status" aria-label={analyzing ? tip : `Code score ${value} of 100. ${tip}`}>
+          {body}
         </span>
-        {state.phase === 'done' && state.analysis && (
-          <button type="button" onClick={onDetails}
-            className="flex-shrink-0 text-slate-300 hover:text-white underline underline-offset-4 decoration-white/30 hover:decoration-white rounded-sm">
-            Details
-          </button>
-        )}
-      </div>
-    </div>
+      )}
+      {state.phase === 'locked' && (
+        <a href="/pricing" className="text-xs text-brand-400 hover:text-brand-300">Pro</a>
+      )}
+    </span>
   );
 }

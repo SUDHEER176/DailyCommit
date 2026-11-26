@@ -1,132 +1,54 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
-import { Group, Panel, Separator } from 'react-resizable-panels';
+import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
 import confetti from 'canvas-confetti';
-import {
-  Play,
-  Send,
-  RotateCcw,
-  ChevronLeft,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Clock,
-  Terminal,
-  FileCode2,
-  Settings,
-  Code2,
-  Copy,
-  Check,
-  Maximize2,
-  Minimize2,
-  Lightbulb,
-  Minus,
-  Plus,
-  ExternalLink
-} from 'lucide-react';
+import { RotateCcw, Copy, Check, Maximize2, Minimize2, Minus, Plus } from 'lucide-react';
 import { getProblemDetails } from '../../data/problemDetails';
 import { runSolution, warmUpPython } from '../../services/execution';
-import { decodeEntities } from '../../services/execution/testCases';
 import { clearlyOtherLanguage } from '../../services/execution/languageCheck';
 import { api } from '../../services/api';
 import { useAttemptTracker } from './useAttemptTracker';
-import NextUpCard, { useNextProblem } from '../practice/NextUpCard';
+import { useNextProblem } from '../practice/NextUpCard';
 import ScoreBar from './ScoreBar';
 import ScoreModal from './ScoreModal';
 import { useCodeScore } from './useCodeScore';
-
-const SUPPORTED_LANGUAGES = [
-  { id: 'javascript', label: 'JavaScript (Node.js)', monacoLang: 'javascript' },
-  { id: 'python', label: 'Python 3', monacoLang: 'python' },
-  { id: 'cpp', label: 'C++ (GCC 10)', monacoLang: 'cpp' },
-  { id: 'java', label: 'Java (OpenJDK 15)', monacoLang: 'java' }
-];
-
-const difficultyText = {
-  Easy: 'text-emerald-400',
-  Medium: 'text-amber-400',
-  Hard: 'text-rose-400',
-};
-
-// Problem statements arrive as light markdown. Render **bold** and `code` instead of showing the marks.
-function renderInline(text = '') {
-  return String(text)
-    .split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
-    .map((part, i) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={i} className="font-medium text-white">{part.slice(2, -2)}</strong>;
-      }
-      if (part.startsWith('`') && part.endsWith('`')) {
-        return (
-          <code key={i} className="px-1 py-0.5 rounded bg-white/[0.06] font-mono text-[13px] text-slate-100">
-            {part.slice(1, -1)}
-          </code>
-        );
-      }
-      return part;
-    });
-}
-
-// Monaco theme on the ink ramp: the editor sits on the card surface, keywords take the brand shade.
-function defineEditorTheme(monaco) {
-  monaco.editor.defineTheme('daily-commit', {
-    base: 'vs-dark',
-    inherit: true,
-    rules: [
-      { token: '', foreground: 'dde1e9' },
-      { token: 'comment', foreground: '767e92' },
-      { token: 'comment.doc', foreground: '767e92' },
-      { token: 'delimiter.bracket', foreground: 'a3a9b8' },
-      { token: 'keyword', foreground: '4d8eff' },
-      { token: 'string', foreground: 'd9a441' },
-      { token: 'number', foreground: 'd9a441' },
-      { token: 'type', foreground: 'a3a9b8' },
-      { token: 'delimiter', foreground: 'a3a9b8' },
-    ],
-    colors: {
-      'editor.background': '#11141c',
-      'editor.foreground': '#dde1e9',
-      'editorLineNumber.foreground': '#4b5565',
-      'editorLineNumber.activeForeground': '#a3a9b8',
-      'editor.lineHighlightBackground': '#1a1e28',
-      'editor.lineHighlightBorder': '#00000000',
-      'editor.selectionBackground': '#0066ff40',
-      'editor.inactiveSelectionBackground': '#0066ff22',
-      'editorCursor.foreground': '#eef0f5',
-      'editorIndentGuide.background1': '#1a1e28',
-      'editorWidget.background': '#1a1e28',
-      'editorWidget.border': '#eef0f514',
-      'editorSuggestWidget.background': '#1a1e28',
-      'editorSuggestWidget.border': '#eef0f514',
-      'editorSuggestWidget.selectedBackground': '#232838',
-      'scrollbarSlider.background': '#eef0f514',
-      'scrollbarSlider.hoverBackground': '#eef0f524',
-      'scrollbarSlider.activeBackground': '#eef0f530',
-    },
-  });
-}
-
-function getProblemSlug(prob) {
-  if (!prob) return '';
-  const url = prob.link || prob.problemUrl || prob.url || '';
-  if (url.includes('problems/')) {
-    return url.split('problems/')[1].split('/')[0].replace(/[^a-z0-9-]/gi, '').toLowerCase();
-  }
-  if (prob.title) {
-    return prob.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  }
-  return '';
-}
+import { hiddenTestsFor } from '../../data/hiddenTests';
+import { SUPPORTED_LANGUAGES, LANGUAGE_KEY } from './languages';
+import { useLightTheme, defineEditorTheme } from './editorTheme';
+import LanguageMenu from './LanguageMenu';
+import { getProblemSlug } from './statement';
+import { useSolveTimer } from './useSolveTimer';
+import { card, toolButton } from './styles';
+import WorkspaceTopBar from './WorkspaceTopBar';
+import ProblemPanel from './ProblemPanel';
+import ConsolePanel from './ConsolePanel';
 
 export default function CodeWorkspace({
   problem: initialProblem,
   onBack,
   onProblemSolved,
-  onOpenProblem // optional: open another problem; enables the "Next up" suggestion after a solve
+  onOpenProblem, // optional: open another problem; enables the "Next up" suggestion after a solve
+  streak = 0, // the person's streak, for today's square in the top bar
+  activeToday = false, // whether today already counts toward it
 }) {
   const [problem, setProblem] = useState(() => getProblemDetails(initialProblem));
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [language, setLanguage] = useState('javascript');
+  // Python first; after that, the language the person last picked
+  const [language, setLanguageState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LANGUAGE_KEY);
+      return SUPPORTED_LANGUAGES.some((l) => l.id === saved) ? saved : 'python';
+    } catch { return 'python'; }
+  });
+  const setLanguage = (id) => {
+    setLanguageState(id);
+    try { localStorage.setItem(LANGUAGE_KEY, id); } catch { /* storage unavailable */ }
+  };
+  const lightTheme = useLightTheme();
+  // "Saved" shows briefly after typing, since drafts save on every change
+  const [savedFlash, setSavedFlash] = useState(false);
+  const savedTimer = useRef(null);
+  useEffect(() => () => clearTimeout(savedTimer.current), []);
   const [code, setCode] = useState('');
   const [activeTab, setActiveTab] = useState('description'); // 'description' | 'solution' | 'submissions'
   const [activeTestIndex, setActiveTestIndex] = useState(0);
@@ -135,10 +57,44 @@ export default function CodeWorkspace({
   const [executionResult, setExecutionResult] = useState(null);
   const [bottomTab, setBottomTab] = useState('testcases'); // 'testcases' | 'result' | 'console'
   const [copied, setCopied] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
+  useEffect(() => {
+    const sync = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+  // The problem statement and the console can be folded away to give the editor the room
+  const statementPanel = usePanelRef();
+  const consolePanel = usePanelRef();
+  const [statementCollapsed, setStatementCollapsed] = useState(false);
+  const [consoleCollapsed, setConsoleCollapsed] = useState(false);
+  const toggleStatement = () => {
+    const panel = statementPanel.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) panel.expand(); else panel.collapse();
+  };
+  const toggleConsole = () => {
+    const panel = consolePanel.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) panel.expand(); else panel.collapse();
+  };
+  const showConsoleTab = (tab) => {
+    setBottomTab(tab);
+    if (consolePanel.current?.isCollapsed()) consolePanel.current.expand();
+  };
   const [fontSize, setFontSize] = useState(14);
   const [runStatus, setRunStatus] = useState(null); // e.g. "Loading Python" while the interpreter downloads
   const attempt = useAttemptTracker(problem);
+  const timer = useSolveTimer(problem?.id);
+  // Solved before (an accepted submit saved on this device), or just now
+  const [acceptedNow, setAcceptedNow] = useState(false);
+  useEffect(() => { setAcceptedNow(false); }, [problem?.id]);
+  const solvedBefore = acceptedNow || (problem?.id != null && api.getLocalAttempts(problem.id).some((a) => a.solved));
+  const doneToday = activeToday || acceptedNow;
 
   // After an accepted submit (and again after a self-rating), suggest what to solve next.
   // Bumped only once the attempt is saved, so the suggestion reflects it.
@@ -202,7 +158,9 @@ export default function CodeWorkspace({
         },
         sampleTestCases: remoteData.sampleTestCases?.length ? remoteData.sampleTestCases : prev?.sampleTestCases,
         examples: remoteData.examples?.length ? remoteData.examples : prev?.examples,
-        constraints: remoteData.constraints?.length ? remoteData.constraints : prev?.constraints
+        constraints: remoteData.constraints?.length ? remoteData.constraints : prev?.constraints,
+        // The server sends [] for problems it has no hidden tests for; keep the ones written locally
+        hiddenTestCases: remoteData.hiddenTestCases?.length ? remoteData.hiddenTestCases : prev?.hiddenTestCases
       }));
       setIsLoadingDetails(false);
     }).catch((err) => {
@@ -256,7 +214,12 @@ export default function CodeWorkspace({
     setCode(val);
     const key = draftKeyRef.current;
     if (key && key === `code_${problem?.id}_${language}`) {
-      try { localStorage.setItem(key, val); } catch { /* storage unavailable */ }
+      try {
+        localStorage.setItem(key, val);
+        setSavedFlash(true);
+        clearTimeout(savedTimer.current);
+        savedTimer.current = setTimeout(() => setSavedFlash(false), 1500);
+      } catch { /* storage unavailable */ }
     }
   };
 
@@ -276,7 +239,7 @@ export default function CodeWorkspace({
     if (!problem || isRunning || isSubmitting) return;
     setIsRunning(true);
     attempt.recordRun(language);
-    setBottomTab('result');
+    showConsoleTab('result');
 
     try {
       const testCases = problem.sampleTestCases || [];
@@ -310,12 +273,13 @@ export default function CodeWorkspace({
   const handleSubmitCode = async () => {
     if (!problem || isRunning || isSubmitting) return;
     setIsSubmitting(true);
-    setBottomTab('result');
+    showConsoleTab('result');
 
     try {
       const allCases = [
         ...(problem.sampleTestCases || []),
-        ...(problem.hiddenTestCases || [])
+        ...(problem.hiddenTestCases || []),
+        ...(await hiddenTestsFor(getProblemSlug(initialProblem))),
       ];
       const res = await runSolution({ problem, language, code, testCases: allCases, onStatus: setRunStatus });
 
@@ -331,13 +295,11 @@ export default function CodeWorkspace({
           // Accepted: say how it did in the middle of the screen, and keep the verdict for Next up
           const optimal = done.score.score === 100;
           setScoreModal({ result: done, variant: optimal ? 'optimal' : 'solved' });
-          if (optimal) {
-            confetti({ particleCount: 140, spread: 80, origin: { y: 0.5 }, colors: ['#34d399', '#facc15', '#ffffff'], disableForReducedMotion: true });
-          }
           attempt.recordAiVerdict(done.analysis.verdict).then(bumpHistory);
         });
 
       if (res.success) {
+        setAcceptedNow(true);
         // Trigger celebratory confetti
         confetti({
           particleCount: 40,
@@ -385,22 +347,10 @@ export default function CodeWorkspace({
   }
 
   const sampleCases = problem.sampleTestCases || [];
-  const activeCase = sampleCases[activeTestIndex] || sampleCases[0];
-  const results = executionResult?.results || [];
-  const passedCount = results.filter((r) => r.passed).length;
 
-  const tabClass = (active) =>
-    `relative h-full inline-flex items-center text-[13px] transition-colors ${
-      active
-        ? 'text-white after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-white'
-        : 'text-slate-500 hover:text-slate-200'
-    }`;
-
-  const iconButton =
-    'w-8 h-8 grid place-items-center rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.06] transition-colors';
-
+  const busy = isRunning || isSubmitting;
   return (
-    <div className={`flex flex-col bg-ink-900 text-slate-100 ${isFullscreen ? 'fixed inset-0 z-50' : 'h-[calc(100vh-64px)] min-h-[640px]'}`}>
+    <div className="h-full flex flex-col gap-2 p-2 bg-ink-950 text-slate-100">
       {/* After an accepted Submit: the score, complexity, main idea and a better way to think about it */}
       {scoreModal && (
         <ScoreModal
@@ -408,185 +358,88 @@ export default function CodeWorkspace({
           variant={scoreModal.variant}
           problemTitle={problem.title}
           onClose={() => setScoreModal(null)}
+          selfRating={attempt.selfRating}
+          onRate={executionResult?.type === 'submit' && executionResult.success
+            ? (value) => attempt.setSelfRating(value).then(bumpHistory)
+            : null}
+          nextProblem={onOpenProblem && !next.loading ? next.rec?.problem : null}
+          onOpenNext={onOpenProblem}
         />
       )}
 
-      {/* Top bar */}
-      <div className="h-12 px-2 border-b border-white/[0.08] flex items-center justify-between flex-shrink-0">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-1 h-8 pl-1.5 pr-2.5 rounded-lg text-[13px] text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
-          Problems
-        </button>
+      {/* Top bar: back, the problem, the clock, today's square, Run and Submit */}
+      <WorkspaceTopBar
+        problem={problem}
+        onBack={onBack}
+        statementCollapsed={statementCollapsed}
+        onToggleStatement={toggleStatement}
+        timer={timer}
+        doneToday={doneToday}
+        streak={doneToday && !activeToday ? streak + 1 : streak}
+        busy={busy}
+        isRunning={isRunning}
+        isSubmitting={isSubmitting}
+        runStatus={runStatus}
+        onRun={handleRunCode}
+        onSubmit={handleSubmitCode}
+      />
 
-        <div className="flex items-center gap-1">
-          <button onClick={handleResetCode} title="Reset to the starter code" aria-label="Reset code" className={iconButton}>
-            <RotateCcw className="w-4 h-4" strokeWidth={1.5} />
-          </button>
-          <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            title={isFullscreen ? 'Exit full screen' : 'Full screen'}
-            aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}
-            className={iconButton}
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" strokeWidth={1.5} /> : <Maximize2 className="w-4 h-4" strokeWidth={1.5} />}
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0">
         <Group orientation="horizontal">
           {/* Problem statement */}
-          <Panel defaultSize={44} minSize={28}>
-            <div className="h-full flex flex-col bg-ink-900">
-              <div className="h-10 px-6 border-b border-white/[0.08] flex items-center gap-6 flex-shrink-0">
-                <button onClick={() => setActiveTab('description')} className={tabClass(activeTab === 'description')}>
-                  Description
-                </button>
-                <button onClick={() => { setActiveTab('solution'); attempt.markHintsViewed(); }} className={tabClass(activeTab === 'solution')}>
-                  Hints and topics
-                </button>
-                {isLoadingDetails && (
-                  <span className="ml-auto font-mono text-xs text-slate-500">Loading statement</span>
-                )}
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-6 py-6 text-sm leading-[1.65] text-slate-300">
-                {activeTab === 'description' && (
-                  <>
-                    <h1 className="text-xl font-medium text-white">
-                      {problem.number ? `${problem.number}. ` : ''}{problem.title}
-                    </h1>
-                    <div className="mt-2 flex items-center gap-3 text-[13px]">
-                      <span className={difficultyText[problem.difficulty] || difficultyText.Easy}>{problem.difficulty}</span>
-                      {problem.topic && <span className="text-slate-500">{problem.topic}</span>}
-                    </div>
-
-                    {problem.contentHtml ? (
-                      <div
-                        className="problem-content-html mt-6 text-sm leading-[1.65] text-slate-300 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-4 [&_pre]:bg-ink-850 [&_pre]:p-4 [&_pre]:rounded-xl [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:border [&_pre]:border-white/[0.06] [&_pre]:my-4 [&_pre]:overflow-x-auto [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-slate-100 [&_code]:font-mono [&_code]:text-[13px] [&_strong]:text-white [&_strong]:font-medium [&_em]:not-italic [&_em]:text-slate-200 [&_img]:max-w-full [&_img]:rounded-xl [&_img]:my-4 [&_img]:border [&_img]:border-white/[0.08]"
-                        dangerouslySetInnerHTML={{ __html: problem.contentHtml }}
-                      />
-                    ) : (
-                      <>
-                        <div className="mt-6 space-y-4 whitespace-pre-line">
-                          {renderInline(problem.description)}
-                        </div>
-
-                        {problem.examples?.length > 0 && (
-                          <div className="mt-8 space-y-3">
-                            {problem.examples.map((ex, idx) => (
-                              <div key={idx}>
-                                <p className="text-[13px] text-white">Example {idx + 1}</p>
-                                <dl className="mt-2 rounded-xl bg-ink-850 border border-white/[0.06] p-4 font-mono text-[13px] leading-[1.7] grid grid-cols-[88px_minmax(0,1fr)] gap-x-2">
-                                  <dt className="text-slate-500">Input</dt>
-                                  <dd className="text-slate-200 break-words">{ex.input}</dd>
-                                  <dt className="text-slate-500">Output</dt>
-                                  <dd className="text-slate-200">{ex.output}</dd>
-                                  {ex.explanation && (
-                                    <>
-                                      <dt className="text-slate-500">Why</dt>
-                                      <dd className="text-slate-400 font-sans text-[13px]">{ex.explanation}</dd>
-                                    </>
-                                  )}
-                                </dl>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {problem.constraints?.length > 0 && (
-                          <div className="mt-8">
-                            <p className="text-[13px] text-white">Constraints</p>
-                            <ul className="mt-2 space-y-1 font-mono text-[13px] text-slate-400">
-                              {problem.constraints.map((c, i) => (
-                                <li key={i} className="flex gap-2">
-                                  <span className="text-slate-600" aria-hidden>·</span>
-                                  <span>{c}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-
-                {activeTab === 'solution' && (
-                  <div>
-                    <h2 className="text-[15px] font-medium text-white">Topics and approach</h2>
-                    <p className="mt-2 text-sm text-slate-400">
-                      This problem mostly tests <span className="text-white">{problem.topic || 'data structures'}</span>.
-                      Try it on your own first, then come back here if you get stuck.
-                    </p>
-                    {problem.video && (
-                      <a
-                        href={problem.video}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={attempt.markVideoOpened}
-                        className="mt-6 inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-ink-800 border border-white/[0.08] hover:border-white/[0.14] text-[13px] text-white transition-colors"
-                      >
-                        Watch the NeetCode explanation
-                        <ExternalLink className="w-3.5 h-3.5 text-slate-500" strokeWidth={1.5} />
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+          <Panel
+            panelRef={statementPanel}
+            defaultSize="44%"
+            minSize="24%"
+            collapsible
+            collapsedSize="0%"
+            onResize={(size) => setStatementCollapsed(size.asPercentage < 1)}
+          >
+            <ProblemPanel
+              problem={problem}
+              isLoadingDetails={isLoadingDetails}
+              activeTab={activeTab}
+              onTab={setActiveTab}
+              onHintsViewed={attempt.markHintsViewed}
+              onVideoOpened={attempt.markVideoOpened}
+              solvedBefore={solvedBefore}
+            />
           </Panel>
 
-          <Separator className="w-px bg-white/[0.08] hover:bg-brand-500 active:bg-brand-500 transition-colors cursor-col-resize relative after:absolute after:inset-y-0 after:-inset-x-1.5" />
+          <Separator className="w-2 relative outline-none cursor-col-resize after:absolute after:inset-y-[40%] after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:rounded-full after:bg-transparent after:transition-colors hover:after:bg-brand-500" />
 
           {/* Editor and console */}
-          <Panel defaultSize={56} minSize={34}>
+          <Panel defaultSize="56%" minSize="34%">
             <Group orientation="vertical">
-              <Panel defaultSize={64} minSize={28}>
-                <div className="h-full flex flex-col bg-ink-850">
-                  <div className="h-10 pl-4 pr-2 border-b border-white/[0.08] flex items-center justify-between flex-shrink-0">
-                    <select
-                      value={language}
-                      onChange={(e) => setLanguage(e.target.value)}
-                      aria-label="Language"
-                      className="h-8 -ml-2 pl-2 pr-7 rounded-lg bg-transparent hover:bg-white/[0.06] text-[13px] text-slate-200 border-0 focus:outline-none cursor-pointer appearance-none bg-no-repeat bg-[right_8px_center] bg-[length:12px] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23767e92%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')]"
-                    >
-                      {SUPPORTED_LANGUAGES.map((lang) => (
-                        <option key={lang.id} value={lang.id} className="bg-ink-850">
-                          {lang.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className="flex items-center gap-1" aria-label="Font size">
-                      <button onClick={() => setFontSize((s) => Math.max(12, s - 1))} className={iconButton} aria-label="Smaller text">
-                        <Minus className="w-3.5 h-3.5" strokeWidth={1.5} />
-                      </button>
-                      <span className="w-8 text-center font-mono text-xs tabular-nums text-slate-500">{fontSize}px</span>
-                      <button onClick={() => setFontSize((s) => Math.min(20, s + 1))} className={iconButton} aria-label="Larger text">
-                        <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
-                      </button>
+              <Panel defaultSize="64%" minSize="24%">
+                <section className={card} aria-label="Code">
+                  <div className="h-11 pl-4 pr-2 border-b border-white/[0.08] flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <LanguageMenu value={language} onChange={setLanguage} />
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-xs text-slate-500 transition-opacity duration-300 ${savedFlash ? 'opacity-100' : 'opacity-0'}`}
+                        aria-live="polite"
+                      >
+                        <Check className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden />
+                        {savedFlash ? 'Saved' : ''}
+                      </span>
                     </div>
+                    {score.enabled && (
+                      <ScoreBar
+                        state={score.state}
+                        onDetails={() => score.state.analysis && setScoreModal({
+                          result: { analysis: score.state.analysis, score: score.state.parts, code: score.state.code },
+                          variant: 'details',
+                        })}
+                      />
+                    )}
                   </div>
 
-                  {score.enabled && (
-                    <ScoreBar
-                      state={score.state}
-                      onDetails={() => score.state.analysis && setScoreModal({
-                        result: { analysis: score.state.analysis, score: score.state.parts, code: score.state.code },
-                        variant: 'details',
-                      })}
-                    />
-                  )}
-
-                  <div className="flex-1 overflow-hidden">
+                  <div className="flex-1 min-h-0 overflow-hidden">
                     <Editor
                       height="100%"
                       language={SUPPORTED_LANGUAGES.find((l) => l.id === language)?.monacoLang || 'javascript'}
-                      theme="daily-commit"
+                      theme={lightTheme ? 'daily-commit-light' : 'daily-commit'}
                       beforeMount={defineEditorTheme}
                       onMount={(editor) => {
                         // Pasted characters are a signal: a pasted solution says little about skill
@@ -617,192 +470,67 @@ export default function CodeWorkspace({
                       }}
                     />
                   </div>
-                </div>
+
+                  {/* Editor toolbar */}
+                  <div className="h-10 px-2 border-t border-white/[0.08] flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-0.5" aria-label="Font size">
+                      <button onClick={() => setFontSize((s) => Math.max(12, s - 1))} className={toolButton} aria-label="Smaller text">
+                        <Minus className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      </button>
+                      <span className="w-10 text-center font-mono text-xs tabular-nums text-slate-500">{fontSize}px</span>
+                      <button onClick={() => setFontSize((s) => Math.min(20, s + 1))} className={toolButton} aria-label="Larger text">
+                        <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <button onClick={handleResetCode} className={toolButton} title="Reset to the starter code">
+                        <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        Reset
+                      </button>
+                      <button onClick={() => copyToClipboard(code)} className={toolButton} title="Copy the code">
+                        {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} /> : <Copy className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                        {copied ? 'Copied' : 'Copy'}
+                      </button>
+                      <button
+                        onClick={toggleFullscreen}
+                        className={toolButton}
+                        title={isFullscreen ? 'Exit full screen' : 'Full screen'}
+                        aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}
+                      >
+                        {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Maximize2 className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                      </button>
+                    </div>
+                  </div>
+                </section>
               </Panel>
 
-              <Separator className="h-px bg-white/[0.08] hover:bg-brand-500 active:bg-brand-500 transition-colors cursor-row-resize relative after:absolute after:inset-x-0 after:-inset-y-1.5" />
+              <Separator className="h-2 relative outline-none cursor-row-resize after:absolute after:inset-x-[40%] after:top-1/2 after:h-0.5 after:-translate-y-1/2 after:rounded-full after:bg-transparent after:transition-colors hover:after:bg-brand-500" />
 
-              <Panel defaultSize={36} minSize={20}>
-                <div className="h-full flex flex-col bg-ink-900">
-                  <div className="h-11 pl-4 pr-2 border-b border-white/[0.08] flex items-center justify-between flex-shrink-0">
-                    <div className="h-full flex items-center gap-6">
-                      <button onClick={() => setBottomTab('testcases')} className={tabClass(bottomTab === 'testcases')}>
-                        Test cases
-                      </button>
-                      <button onClick={() => setBottomTab('result')} className={`${tabClass(bottomTab === 'result')} gap-2`}>
-                        Result
-                        {executionResult && (
-                          <span className={`w-1.5 h-1.5 rounded-full ${executionResult.success ? 'bg-emerald-400' : 'bg-rose-400'}`} aria-hidden />
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleRunCode}
-                        disabled={isRunning || isSubmitting}
-                        className="inline-flex items-center gap-2 h-8 px-3 rounded-lg bg-ink-800 border border-white/[0.08] hover:border-white/[0.14] text-[13px] text-white transition-colors active:scale-[0.98] disabled:opacity-50"
-                      >
-                        <Play className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
-                        {isRunning ? (runStatus || 'Running') : 'Run'}
-                      </button>
-                      <button
-                        onClick={handleSubmitCode}
-                        disabled={isRunning || isSubmitting}
-                        className="btn-primary-glow inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium active:scale-[0.98] disabled:opacity-50"
-                      >
-                        {isSubmitting ? (runStatus || 'Submitting') : 'Submit'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-4">
-                    {bottomTab === 'testcases' && (
-                      <div>
-                        <div className="flex items-center gap-1">
-                          {sampleCases.map((c, i) => (
-                            <button
-                              key={c.id || i}
-                              onClick={() => setActiveTestIndex(i)}
-                              className={`h-8 px-3 rounded-lg text-[13px] transition-colors ${
-                                activeTestIndex === i
-                                  ? 'bg-white/[0.06] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
-                                  : 'text-slate-500 hover:text-white'
-                              }`}
-                            >
-                              Case {i + 1}
-                            </button>
-                          ))}
-                        </div>
-
-                        {activeCase ? (
-                          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                            <div>
-                              <p className="text-xs text-slate-500">Input</p>
-                              <pre className="mt-2 p-3 rounded-[10px] bg-ink-850 border border-white/[0.06] font-mono text-[13px] text-slate-200 whitespace-pre-wrap">{decodeEntities(activeCase.input)}</pre>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-500">Expected</p>
-                              <pre className="mt-2 p-3 rounded-[10px] bg-ink-850 border border-white/[0.06] font-mono text-[13px] text-slate-200 whitespace-pre-wrap">{decodeEntities(activeCase.expected)}</pre>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="mt-4 text-[13px] text-slate-500">This problem has no sample cases yet</p>
-                        )}
-                      </div>
-                    )}
-
-                    {bottomTab === 'result' && (
-                      !executionResult ? (
-                        <div className="h-full min-h-[120px] flex items-center justify-center text-[13px] text-slate-500">
-                          Run to check the sample cases, or submit to check them all
-                        </div>
-                      ) : (
-                        <div>
-                          {/* Verdict: the moment of this screen */}
-                          <div className="flex flex-wrap items-end justify-between gap-4">
-                            <div>
-                              <div className={`text-[22px] leading-none font-medium ${executionResult.success ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                {executionResult.verdict}
-                              </div>
-                              <div className="mt-2 text-xs text-slate-500">
-                                {executionResult.type === 'submit' ? 'Submitted' : 'Sample cases'} ·{' '}
-                                <span className="font-mono tabular-nums">{passedCount} / {results.length} passed</span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-mono text-[22px] leading-none tabular-nums text-white">
-                                {executionResult.runtimeMs}<span className="ml-1 text-[13px] text-slate-500">ms</span>
-                              </div>
-                              <div className="mt-2 text-xs text-slate-500">Runtime</div>
-                            </div>
-                          </div>
-
-                          {executionResult.type === 'submit' && executionResult.success && (
-                            <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="How hard was this problem for you">
-                              <span className="text-[13px] text-slate-400">How did that feel?</span>
-                              {[['easy', 'Easy'], ['ok', 'OK'], ['hard', 'Hard']].map(([value, label]) => (
-                                <button
-                                  key={value}
-                                  type="button"
-                                  aria-pressed={attempt.selfRating === value}
-                                  onClick={() => attempt.setSelfRating(value).then(bumpHistory)}
-                                  className={`h-7 px-3 rounded-lg text-[13px] border transition-colors ${
-                                    attempt.selfRating === value
-                                      ? 'bg-white/[0.08] border-white/[0.16] text-white'
-                                      : 'border-white/[0.08] text-slate-400 hover:text-white hover:border-white/[0.14]'
-                                  }`}
-                                >
-                                  {label}
-                                </button>
-                              ))}
-                              {attempt.selfRating && <span className="text-xs text-slate-500">Saved</span>}
-                            </div>
-                          )}
-
-                          {executionResult.type === 'submit' && executionResult.success && onOpenProblem && (
-                            <div className="mt-4">
-                              <NextUpCard compact rec={next.rec} loading={next.loading} onOpen={onOpenProblem} onSkip={next.skip} />
-                            </div>
-                          )}
-
-                          {/* Couldn't get it? Say so and get an easier problem to build up with */}
-                          {!executionResult.success && onOpenProblem && (
-                            <div className="mt-4">
-                              {stuckOpen ? (
-                                <NextUpCard compact rec={next.rec} loading={next.loading} onOpen={onOpenProblem} onSkip={next.skip} />
-                              ) : (
-                                <p className="text-[13px] text-slate-400">
-                                  Stuck on this one?{' '}
-                                  <button type="button" onClick={askForEasier}
-                                    className="text-white underline underline-offset-4 decoration-white/30 hover:decoration-white rounded-sm">
-                                    Suggest an easier problem
-                                  </button>
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="mt-4 flex flex-wrap gap-1" aria-label={`${passedCount} of ${results.length} cases passed`}>
-                            {results.map((r, i) => (
-                              <span
-                                key={i}
-                                title={`Case ${r.testCaseIndex}: ${r.passed ? 'passed' : 'failed'}`}
-                                className={`w-3 h-3 rounded-[3px] ${r.passed ? 'bg-brand-500' : 'bg-rose-500'}`}
-                              />
-                            ))}
-                          </div>
-
-                          <ul className="mt-6 divide-y divide-white/[0.06] border-t border-white/[0.06]">
-                            {results.map((res, i) => (
-                              <li key={i} className="py-3 font-mono text-[13px]">
-                                <div className="flex items-center justify-between font-sans">
-                                  <span className="text-slate-300">Case {res.testCaseIndex}</span>
-                                  <span className={res.passed ? 'text-emerald-400' : 'text-rose-400'}>
-                                    {res.passed ? 'Passed' : 'Failed'}
-                                  </span>
-                                </div>
-                                {res.error ? (
-                                  <p className="mt-2 text-rose-400 whitespace-pre-wrap">{res.error}</p>
-                                ) : (
-                                  <dl className="mt-2 grid grid-cols-[80px_minmax(0,1fr)] gap-x-2 gap-y-1">
-                                    <dt className="text-slate-500">Output</dt>
-                                    <dd className={res.passed ? 'text-slate-200' : 'text-rose-400'}>{res.actual}</dd>
-                                    <dt className="text-slate-500">Expected</dt>
-                                    <dd className="text-slate-200">{res.expected}</dd>
-                                  </dl>
-                                )}
-                                {res.logs && (
-                                  <pre className="mt-2 p-2 rounded-lg bg-ink-850 text-xs text-slate-400 whitespace-pre-wrap">{res.logs}</pre>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
+              <Panel
+                panelRef={consolePanel}
+                defaultSize="36%"
+                minSize="18%"
+                collapsible
+                collapsedSize="44px"
+                onResize={(size) => setConsoleCollapsed(size.inPixels < 48)}
+              >
+                <ConsolePanel
+                  bottomTab={bottomTab}
+                  collapsed={consoleCollapsed}
+                  onShowTab={showConsoleTab}
+                  onToggle={toggleConsole}
+                  executionResult={executionResult}
+                  sampleCases={sampleCases}
+                  activeTestIndex={activeTestIndex}
+                  onSelectCase={setActiveTestIndex}
+                  selfRating={attempt.selfRating}
+                  onRate={(value) => attempt.setSelfRating(value).then(bumpHistory)}
+                  showRating={!(score.enabled && score.state.phase === 'done' && score.state.analysis)}
+                  onOpenProblem={onOpenProblem}
+                  next={next}
+                  stuckOpen={stuckOpen}
+                  onAskEasier={askForEasier}
+                />
               </Panel>
             </Group>
           </Panel>
