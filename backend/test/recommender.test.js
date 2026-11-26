@@ -225,7 +225,8 @@ test('the frontend copies are in sync with the backend', () => {
     ['backend/data/problem-graph.json', 'frontend/src/data/problemGraph.json'],
   ];
   pairs.forEach(([src, copy]) => {
-    const body = (p) => fs.readFileSync(path.join(root, p), 'utf8').replace(/^\/\/ GENERATED.*\n/, '');
+    // \r?: Windows checkouts have CRLF line endings, and `.` doesn't match \r
+    const body = (p) => fs.readFileSync(path.join(root, p), 'utf8').replace(/^\/\/ GENERATED.*\r?\n/, '');
     assert.equal(body(copy), body(src), `${copy} is stale; run: node scripts/sync-recommender.mjs`);
   });
 });

@@ -13,7 +13,9 @@ Two independent npm packages; install and run each separately (the root `package
 ```bash
 cd backend && npm install && npm run dev    # API on http://localhost:5000 (node --watch)
 cd frontend && npm install && npm run dev   # Vite on http://localhost:3000
-cd frontend && npm run build                # outputs frontend/dist (committed to the repo)
+cd frontend && npm run build                # outputs frontend/dist (not committed; Vercel builds the site)
+cd frontend && npm test                     # frontend tests (Vitest): execution harness, runners, hidden tests
+cd frontend && npm run hidden-tests         # after editing scripts/hidden-tests/problems.js
 ```
 
 ```bash
@@ -22,7 +24,7 @@ cd backend && node --test --test-name-pattern="Two Sum" "test/**/*.test.js"   # 
 node scripts/sync-recommender.mjs                            # after editing backend/data/recommender.js or problem-graph.json
 ```
 
-`backend/test/api.test.js` spawns the real server in testing mode with `DB_FILE` pointing at a temp file. `backend/test/production.e2e.test.js` runs the real server in production mode inside the test process on an in-memory Postgres (pglite): sign-up, sign-in, payments (Razorpay's order API faked, signatures real), Pro gates, refunds, password reset, export and delete, CORS. The harness is `test/helpers/production-harness.js`; `node test/helpers/demo-production.mjs` runs the same thing on port 5000 for trying in a browser (a helper on port 5001 reads emailed codes and makes an account Pro). Tests need Node 22. Use the `DB_FILE` trick when running the server for manual testing in file mode. There is no frontend test suite, linter or CI; check frontend changes with `npx vite build --outDir <somewhere outside the repo>` (plain `npm run build` rewrites the committed `frontend/dist`) and by running the app. Node 18+ is required (backend uses global `fetch`).
+`backend/test/api.test.js` spawns the real server in testing mode with `DB_FILE` pointing at a temp file. `backend/test/production.e2e.test.js` runs the real server in production mode inside the test process on an in-memory Postgres (pglite): sign-up, sign-in, payments (Razorpay's order API faked, signatures real), Pro gates, refunds, password reset, export and delete, CORS. The harness is `test/helpers/production-harness.js`; `node test/helpers/demo-production.mjs` runs the same thing on port 5000 for trying in a browser (a helper on port 5001 reads emailed codes and makes an account Pro). Tests need Node 22. Use the `DB_FILE` trick when running the server for manual testing in file mode. Frontend tests (Vitest) live next to the code: `src/services/execution/__tests__/` runs real solutions through the real JS worker source, the Python driver from `py.worker.js` under a local `python`, and the generated C++/Java programs compiled with local `g++`/`javac` (each language skips when its tool is missing; `localRunners.js` is the shared helper). CI (`.github/workflows/ci.yml`) runs the backend tests, the frontend tests and a build. There is no linter; check UI changes with `npx vite build --outDir <somewhere outside the repo>` and by running the app. Node 18+ is required (backend uses global `fetch`).
 
 `node scripts/import-neetcode150.js` (run from repo root) idempotently merges the seed list into `backend/data/problems.json`.
 
@@ -46,7 +48,9 @@ node scripts/sync-recommender.mjs                            # after editing bac
 - `services/api.js` is the single API client. It attaches the bearer token from localStorage (keys are prefixed `codestreak_`), dispatches an `auth:expired` window event on 401, and falls back to localStorage/`data/initialData.js` when the backend is unreachable (offline mode). `VITE_API_URL` overrides the default `http://localhost:5000/api`.
 - `index.html` + `public/intro/` + `lib/splash.js` implement the splash screen that waits on `/api/health` (Render free tier cold start) with a "Continue offline" option.
 - Path alias `@` → `src`; `motion` / `motion/react` are aliased to `framer-motion`. JSX and a few shadcn-style `.tsx` files coexist in `components/ui/`.
-- App modals are imported from `components/modals/`; the same-named files directly under `components/` are older copies.
+- App modals live in `components/modals/`.
+- `PracticeHub.jsx` holds the hub's state and data loading; its pieces are in `components/practice/` (`HubSidebar`, `HubTopBar`, `SheetFilters`, `SheetList`, `SheetIcon`, `sheets.js`, `TodayTasksCard`, `SheetOutlineModal`, plus the cards). The code editor opens as a full-window workspace portalled to `<body>` (body scroll locked), so only its panels scroll.
+- `CodeWorkspace/CodeWorkspace.jsx` holds the editor's state, Run/Submit and the Monaco card; the rest is split out: `WorkspaceTopBar`, `ProblemPanel`, `ConsolePanel`, `LanguageMenu`, `editorTheme.js` (dark and light Monaco themes), `languages.js` (Python first; last pick remembered), `statement.jsx`, `styles.js`, `useSolveTimer.js`.
 
 ### Code execution (`frontend/src/services/execution/`)
 
@@ -54,6 +58,7 @@ node scripts/sync-recommender.mjs                            # after editing bac
 - JS runs in `js.worker.js`, Python in Pyodide via `py.worker.js` (both in-browser with time limits). C++/Java: `cppDriver.js` / `javaDriver.js` generate a full program with a `main` around the user's code, posted to `POST /api/execute`, which proxies to Judge0 so the key stays server-side. Compile-error line numbers are shifted using `USER_CODE_MARKER`.
 - All runners return the same `{ success, verdict, runtimeMs, results }` shape and emit marked per-case output parsed by `parseMarkedOutput`.
 - The 7 LeetCode Premium problems have hand-written statements/tests in `data/premiumProblems.js`.
+- **Hidden Submit tests:** `src/data/hiddenTests.json` (lazy-loaded on the first Submit by `data/hiddenTests.js`) holds extra cases for 46 of the first 50 problems. Never edit it by hand: `scripts/hidden-tests/problems.js` has each problem's metaData, a reference solution, statement examples (generation aborts if the reference gets one wrong) and a seeded generator; `npm run hidden-tests` runs the references through the real harness to compute the expected answers, and a test fails when the JSON is stale. A case may set `anyOrder: true` (e.g. Generate Parentheses) to compare in any order even when the statement doesn't say so.
 
 ### Adaptive practice ("Next up") and AI code review
 
@@ -67,8 +72,9 @@ node scripts/sync-recommender.mjs                            # after editing bac
 - **Accounts:** `POST /auth/forgot-password` (same answer for every address) and `/auth/reset-password` use the `email_codes` table with purpose `reset`, then revoke all sessions (`deleteUserSessions`). `DELETE /auth/me` anonymises rather than hard-deletes: it erases `user_state`, clears name/email/sign-in links and Pro, and keeps `payments` rows (accounting) tied to no personal details; `forgetUserData` drops the in-memory copy first so a late save can't bring it back. `GET /auth/me/export` returns profile, payments and all saved data.
 - **Refunds:** the `refund.processed` webhook calls `applyRefund`: a full refund marks the payment `refunded` and subtracts its days from `plan_expires_at` (never below now); partial refunds and repeats do nothing.
 - **CORS:** `CORS_ORIGINS` (comma-separated) restricts browser callers; unset allows any (production warns at startup).
+- **Error tracking:** Sentry, off unless `SENTRY_DSN` (backend, `data/monitoring.js`, imported second in `server.js` so it starts before Express) or `VITE_SENTRY_DSN` (frontend, `lib/monitoring.js`, SDK lazy-loaded) is set. Both scrub events: no IP, cookies, auth headers, request bodies or query strings. `setupErrorHandling(app)` also turns errors that reach Express into JSON (`{ error }`, a generic message for 5xx).
 - The frontend API client answers 401 locally for signed-out visitors when the server has accounts on, instead of sending requests that would be refused (`refusedWithoutSignIn` in `services/api.js`).
-- **Code score and AI analysis (Pro):** `backend/data/ai-review.js` asks Google Gemini (`@google/genai`, default `gemini-2.5-flash`, free tier; transient 500/503 are retried) for a JSON analysis: time and space complexity, the best known, grades (optimal / good / poor), the approach, the main idea and a better way to think about it. `backend/data/code-score.js` turns the grades and the tests passed into the 0-100 score (tests 40, time 40, space 20, with the time and space credit scaled by the share of tests passed; 100 needs every test and optimal time and space). `routes/ai.js` (`POST /api/ai/review`) is behind `requireUser` + `requirePro`, caches analyses by code hash (`analysis-cache.js`, so repeats are free) and counts only new analyses against `AI_REVIEW_DAILY_LIMIT` (default 30). After an accepted Submit it keeps the verdict on the attempt for the recommender. Off without `GEMINI_API_KEY`. UI: `CodeWorkspace/useCodeScore.js`, `ScoreBar.jsx` (after every Run and Submit; compile and runtime errors are not analysed) and `ScoreModal.jsx` (centred popup after an accepted Submit, and from the bar's Details).
+- **Code score and AI analysis (Pro):** `backend/data/ai-review.js` asks Google Gemini (`@google/genai`, default `gemini-2.5-flash`, free tier; transient 500/503 are retried) for a JSON analysis: time and space complexity, the best known, grades (optimal / good / poor), the approach, the main idea and a better way to think about it. `backend/data/code-score.js` turns the grades and the tests passed into the 0-100 score (tests 40, time 40, space 20, with the time and space credit scaled by the share of tests passed; 100 needs every test and optimal time and space). `routes/ai.js` (`POST /api/ai/review`) is behind `requireUser` + `requirePro`, caches analyses by code hash (`analysis-cache.js`, so repeats are free) and counts only new analyses against `AI_REVIEW_DAILY_LIMIT` (default 30). After an accepted Submit it keeps the verdict on the attempt for the recommender. Off without `GEMINI_API_KEY`. UI: `CodeWorkspace/useCodeScore.js`, `ScoreBar.jsx` (a score pill in the editor header, shown after the first Run or Submit; compile and runtime errors are not analysed) and `ScoreModal.jsx` (a right-hand analysis panel with a segmented score ring, opened after an accepted Submit and by clicking the pill; it also holds the self-rating and the Next up button, so the Result tab shows the self-rating only when no analysis arrived).
 
 ### Duplicated logic to keep in sync
 
@@ -81,4 +87,4 @@ node scripts/sync-recommender.mjs                            # after editing bac
 - Working-tree files use CRLF line endings (`core.autocrlf=true`); multi-line string replacements in scripts must account for `\r\n`.
 
 - `.agents/skills/unslop/` is a UI-polish skill used for design passes on the frontend.
-- `daily-commit-intro.mp4` (~19 MB) and stray files `console.log('FRONTEND` / `powershell.cmd` sit at the root; don't extend them.
+- `*.mp4` and `frontend/dist/` are ignored: the intro video stays out of git, and Vercel builds the frontend itself. The project is MIT licensed (`LICENSE`).
