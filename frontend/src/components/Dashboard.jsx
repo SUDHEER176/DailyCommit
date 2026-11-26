@@ -1,19 +1,18 @@
 import React from 'react';
 import { ArrowRight, Plus } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { BRAND } from '@/lib/brand';
 
-import Hero22 from './Hero22';
-import Stats15 from './reactbits/Stats15';
-import Features13 from './reactbits/Features13';
-import HowItWorks7 from './reactbits/HowItWorks7';
+import LandingHero from './landing/LandingHero';
+import ProofStrip from './landing/ProofStrip';
+import SheetsSection from './landing/SheetsSection';
+import SolveFlow from './landing/SolveFlow';
+import TopicPicker from './landing/TopicPicker';
+import FreeVsPro from './landing/FreeVsPro';
+import Testimonials from './landing/Testimonials';
+import FaqSection from './landing/FaqSection';
+import PrepCta from './landing/PrepCta';
 import TaskSteps from './ui/task-steps';
 import Calendar from './ui/calendar';
-import IntegrationsSection from './ui/integrations-3';
-import Faqs01 from './ui/faqs-01';
-import FeatureBento from './reactbits/FeatureBento';
-import FinalCTA from './reactbits/FinalCTA';
-import RevisionTimeline from './RevisionTimeline';
 
 export default function Dashboard({ 
   stats, 
@@ -76,7 +75,7 @@ export default function Dashboard({
 
   // Scroll spy to update activeTab in navbar as user scrolls through sections
   React.useEffect(() => {
-    const sectionIds = ['overview', 'features', 'today-plan', 'how-it-works', 'integrations', 'faqs'];
+    const sectionIds = ['overview', 'today-plan', 'sheets', 'how-it-works', 'topics', 'compare', 'faqs'];
     const handleScroll = () => {
       const scrollPos = window.scrollY + 220;
       for (let i = sectionIds.length - 1; i >= 0; i--) {
@@ -91,44 +90,21 @@ export default function Dashboard({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [setActiveTab]);
 
+  const signedIn = Boolean(currentUser?.isAuthenticated);
   const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <div className="space-y-24 sm:space-y-32">
-
-      {/* Overview: hero, preview, logos, scheduling */}
-      <div id="overview" className="space-y-24 sm:space-y-32 scroll-mt-24">
-        <Hero22
-          stats={stats}
-          todayTasks={todayTasks}
-          onOpenTaskModal={onOpenTaskModal}
-          onOpenProblemModal={onOpenProblemModal}
-          onOpenAuthModal={onOpenAuthModal}
-          currentUser={currentUser}
-          setActiveTab={setActiveTab}
-          activeTab={activeTab}
-          onNavigate={onNavigate}
-        />
-
-        <Stats15 stats={stats} setActiveTab={setActiveTab} />
+    <div className="space-y-24 sm:space-y-28">
+      {/* Overview: the headline, the four paper cards and the strip under them */}
+      <div id="overview" className="scroll-mt-24 space-y-6">
+        <LandingHero onNavigate={onNavigate} />
+        <ProofStrip />
       </div>
 
-      <RevisionTimeline />
-
-      <FeatureBento stats={stats} setActiveTab={setActiveTab} onNavigate={onNavigate} signedIn={Boolean(currentUser?.isAuthenticated)} />
-
-      <div id="features" className="scroll-mt-24">
-        <Features13
-          stats={stats}
-          todayTasks={todayTasks}
-          setActiveTab={setActiveTab}
-          onOpenTaskModal={onOpenTaskModal}
-          onOpenProblemModal={onOpenProblemModal}
-        />
-      </div>
-
-      {/* Today's plan: the task sequence and this month's solve calendar */}
-      <div id="today-plan" className="scroll-mt-24">
+      {/* Today's plan: the task sequence and this month's solve calendar. Signed in only,
+          where it shows real tasks; visitors don't get a mock to-do list */}
+      {signedIn && (
+      <div id="today-plan" className="land-col scroll-mt-24">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
             <span className="eyebrow">{todayLabel}</span>
@@ -204,20 +180,21 @@ export default function Dashboard({
           <Calendar onOpenProblemModal={onOpenProblemModal} />
         </div>
       </div>
+      )}
 
-      <div id="how-it-works" className="scroll-mt-24">
-        <HowItWorks7 setActiveTab={setActiveTab} onOpenProblemModal={onOpenProblemModal} />
-      </div>
+      <SheetsSection onNavigate={onNavigate} />
 
-      <div id="integrations" className="scroll-mt-24">
-        <IntegrationsSection onGetStarted={() => setActiveTab && setActiveTab('planner')} />
-      </div>
+      <SolveFlow />
 
-      <div id="faqs" className="scroll-mt-24">
-        <Faqs01 supportEmail={BRAND.supportEmail} whatsappNumber={BRAND.whatsappNumber} />
-      </div>
+      <TopicPicker onNavigate={onNavigate} />
 
-      <FinalCTA onOpenProblemModal={onOpenProblemModal} onNavigate={onNavigate} />
+      <FreeVsPro onNavigate={onNavigate} />
+
+      <Testimonials />
+
+      <FaqSection />
+
+      <PrepCta onNavigate={onNavigate} />
     </div>
   );
 }

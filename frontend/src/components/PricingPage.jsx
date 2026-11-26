@@ -9,7 +9,7 @@ const FALLBACK_PLANS = [
   { id: 'pro_yearly', name: 'Pro yearly', amount: 149900, currency: 'INR', days: 365 },
 ];
 
-const FREE_FEATURES = [
+export const FREE_FEATURES = [
   'One active plan that follows your target date',
   'Problem log, streak and solve heatmap',
   'Revision at 3, 7 and 21 days',
@@ -18,7 +18,7 @@ const FREE_FEATURES = [
 ];
 
 // Pro features not built yet are marked, so nobody pays for something that is not there
-const PRO_FEATURES = [
+export const PRO_FEATURES = [
   { text: 'Everything in Free' },
   { text: 'AI code review after each solve: time and space complexity, whether it’s optimal, one tip' },
   { text: 'Company-wise sheets: Amazon, Google, Microsoft and more', soon: true },

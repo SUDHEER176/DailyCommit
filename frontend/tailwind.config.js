@@ -87,6 +87,8 @@ export default {
       fontFamily: {
         sans: ['Geist', 'system-ui', 'sans-serif'],
         mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        // Handwriting, for the landing page's paper cards only
+        hand: ['Caveat', 'cursive'],
       },
       transitionTimingFunction: {
         DEFAULT: 'cubic-bezier(0.22, 1, 0.36, 1)',

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Check, AlertTriangle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { generateScheduleClient } from '../../utils/schedulerEngine';
@@ -78,6 +78,16 @@ const fmt = (iso, opts = { month: 'short', day: 'numeric' }) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', opts);
 const hours = (h) => (h < 10 ? h.toFixed(1).replace(/\.0$/, '') : Math.round(h));
 
+// Keep only answers that match one of the wizard's options (prefill comes from session storage)
+function pickKnown(picked) {
+  if (!picked) return {};
+  const out = {};
+  STEPS.forEach((q) => {
+    if (q.options?.some((o) => o.value === picked[q.key])) out[q.key] = picked[q.key];
+  });
+  return out;
+}
+
 // Hours a full day needs for this pace. Mirrors the weighting in utils/schedulerEngine.js
 function neededHoursFor({ level, targetDays, revision }, solvedIds) {
   const left = questionList.filter((q) => !solvedIds.has(q.id));
@@ -145,6 +155,7 @@ export default function PlannerWizardModal({
   onClose,
   onPlanGenerated,
   currentConfig = null,
+  prefill = null,
   solvedIds = [],
 }) {
   const [step, setStep] = useState(0);
@@ -156,7 +167,8 @@ export default function PlannerWizardModal({
     targetDays: Number(c?.targetDays) || 45,
     revision: c?.includeRevision !== false,
   });
-  const [answers, setAnswers] = useState(() => answersFrom(currentConfig));
+  const prefillRef = useRef(prefill);
+  const [answers, setAnswers] = useState(() => ({ ...answersFrom(currentConfig), ...pickKnown(prefill) }));
 
   const solvedKey = solvedIds.join(',');
   const solved = useMemo(() => new Set(solvedIds), [solvedKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -165,7 +177,10 @@ export default function PlannerWizardModal({
   useEffect(() => {
     if (!isOpen) return;
     setStep(0);
-    setAnswers(answersFrom(currentConfig));
+    // Answers picked on the landing page apply to the first opening only
+    const picked = prefillRef.current;
+    prefillRef.current = null;
+    setAnswers({ ...answersFrom(currentConfig), ...pickKnown(picked) });
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

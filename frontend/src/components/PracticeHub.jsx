@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ArrowRight, CalendarDays } from 'lucide-react';
 import PersonalizedPlannerView from './PersonalizedPlanner/PersonalizedPlannerView';
+import { takePlanPrefill } from '@/lib/planPrefill';
 import CodeWorkspace from './CodeWorkspace/CodeWorkspace';
 import DailyProblemCard from './practice/DailyProblemCard';
 import RevisionQueueCard from './practice/RevisionQueueCard';
@@ -30,7 +31,9 @@ export default function PracticeHub({
   currentUser,
   todayTasks = []
 }) {
-  const [activeView, setActiveView] = useState('sheets'); // 'sheets' | 'planner'
+  // Answers from the landing page's plan bar: open the planner with the wizard filled in
+  const [planPrefill] = useState(takePlanPrefill);
+  const [activeView, setActiveView] = useState(planPrefill ? 'planner' : 'sheets'); // 'sheets' | 'planner'
   const [activeEditorProblem, setActiveEditorProblem] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const handleGoHome = () => {
@@ -192,7 +195,7 @@ export default function PracticeHub({
               <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
               <span>Back to sheets</span>
             </button>
-            <PersonalizedPlannerView onNavigate={onNavigate} />
+            <PersonalizedPlannerView onNavigate={onNavigate} onOpenWizardDirect={Boolean(planPrefill)} prefill={planPrefill} />
           </div>
         ) : (
           <>

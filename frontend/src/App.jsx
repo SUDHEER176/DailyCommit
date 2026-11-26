@@ -212,8 +212,12 @@ export default function App() {
     setRoadmap(updatedRoadmap);
   };
 
+  const onLanding = currentPath !== '/pricing' && !['planner', 'problems', 'roadmap', 'revision', 'analytics', 'explore'].includes(activeTab);
+
   // Active tab index for bottom-nav-bar
-  const activeIndex = navTabs.findIndex(t => t.id === activeTab);
+  // Today's plan is a signed-in section, so visitors don't get a link to it
+  const bottomTabs = currentUser?.isAuthenticated ? navTabs : navTabs.filter(t => t.id !== 'today-plan');
+  const activeIndex = bottomTabs.findIndex(t => t.id === activeTab);
   const handleTabChange = (idx, item) => {
     if (item?.id) {
       if (item.id === 'explore') {
@@ -292,6 +296,8 @@ export default function App() {
         setActiveTab={setActiveTab}
         onNavigate={navigate}
         streak={currentUser?.isAuthenticated ? (stats.user?.streak ?? 0) : null}
+        committedToday={todayTasks.some((t) => t.completed)}
+        wide={onLanding}
         onOpenTaskModal={() => setIsTaskModalOpen(true)}
         onOpenProblemModal={() => setIsProblemModalOpen(true)}
         onOpenCodeEditor={() => handleOpenCodeEditor()}
@@ -306,7 +312,8 @@ export default function App() {
       <ProNotice key={currentUser?.proUntil || 'none'} currentUser={currentUser} onNavigate={navigate} />
 
       {/* Main Content Area: Dynamic View based on activeTab */}
-      <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* The landing page runs its panels edge to edge and centers their content itself */}
+      <main className={`relative z-10 w-full mx-auto py-8 ${onLanding ? 'px-3 sm:px-4' : 'max-w-7xl px-4 sm:px-6 lg:px-8'}`}>
         {currentPath === '/pricing' ? (
           <PricingPage
             currentUser={currentUser}
@@ -378,13 +385,13 @@ export default function App() {
       </main>
 
       {/* Footer 12 */}
-      <Footer stats={stats} setActiveTab={setActiveTab} onNavigate={navigate} />
+      <Footer stats={stats} setActiveTab={setActiveTab} onNavigate={navigate} signedIn={Boolean(currentUser?.isAuthenticated)} />
 
       {/* Floating Bottom Nav Bar (Shadcn + Framer Motion Pattern) */}
       <div className="md:hidden">
         <BottomNavBar
           stickyBottom
-          items={navTabs}
+          items={bottomTabs}
           activeIndex={activeIndex !== -1 ? activeIndex : 0}
           onTabChange={handleTabChange}
           revisionCount={problems.filter(p => p.needsRevision).length}
