@@ -6,7 +6,7 @@ export default function PrepCta({ onNavigate }) {
   const go = (p) => onNavigate && onNavigate(p);
   const ink = useInkSheet();
   return (
-    <section {...ink} className="ink-sheet rounded-[24px] border border-slate-200 dark:border-white/[0.06] bg-slate-100/70 dark:bg-ink-850 px-6 py-16 sm:py-20 text-center">
+    <section {...ink} className="ink-sheet rounded-[24px] border border-slate-200 dark:border-white/[0.06] bg-slate-100/70 dark:bg-ink-850 px-4 py-16 sm:px-6 sm:py-20 text-center">
       <h2 className="text-[32px] sm:text-[44px] leading-[1.1] font-medium tracking-[-0.025em] text-slate-900 dark:text-white">
         Head over to the practice hub
       </h2>

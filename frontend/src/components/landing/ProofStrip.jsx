@@ -12,7 +12,7 @@ const FACTS = [
 export default function ProofStrip() {
   const ink = useInkSheet();
   return (
-    <section {...ink} className="ink-sheet rounded-[24px] border border-slate-200 dark:border-white/[0.06] bg-slate-100/70 dark:bg-ink-850 px-6 py-6 sm:px-8">
+    <section {...ink} className="ink-sheet rounded-[24px] border border-slate-200 dark:border-white/[0.06] bg-slate-100/70 dark:bg-ink-850 p-4 sm:p-6">
       <div className="land-col flex flex-col lg:flex-row lg:items-center justify-between gap-6">
       <div>
         <p className="font-hand text-[34px] sm:text-[40px] leading-none text-slate-900 dark:text-white">

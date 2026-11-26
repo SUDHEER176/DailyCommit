@@ -365,7 +365,7 @@
     "starterTemplates": {
       "cpp": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        \n    }\n};",
       "java": "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        \n    }\n}",
-      "python": "class Solution(object):\n    def twoSum(self, nums, target):\n        \"\"\"\n        :type nums: List[int]\n        :type target: int\n        :rtype: List[int]\n        \"\"\"\n        ",
+      "python": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nvar twoSum = function(nums, target) {\n    \n};"
     },
     "examples": [],
@@ -423,7 +423,7 @@
       },
       "manual": false
     },
-    "cacheVersion": 2
+    "cacheVersion": 3
   },
   "valid-anagram": {
     "id": "nc-242",
@@ -434,7 +434,7 @@
     "starterTemplates": {
       "cpp": "class Solution {\npublic:\n    bool isAnagram(string s, string t) {\n        \n    }\n};",
       "java": "class Solution {\n    public boolean isAnagram(String s, String t) {\n        \n    }\n}",
-      "python": "class Solution(object):\n    def isAnagram(self, s, t):\n        \"\"\"\n        :type s: str\n        :type t: str\n        :rtype: bool\n        \"\"\"\n        ",
+      "python": "class Solution:\n    def isAnagram(self, s: str, t: str) -> bool:\n        ",
       "javascript": "/**\n * @param {string} s\n * @param {string} t\n * @return {boolean}\n */\nvar isAnagram = function(s, t) {\n    \n};"
     },
     "examples": [],
@@ -479,7 +479,7 @@
         "type": "boolean"
       }
     },
-    "cacheVersion": 2
+    "cacheVersion": 3
   },
   "lru-cache": {
     "id": "nc-146",
@@ -721,7 +721,7 @@
     "starterTemplates": {
       "cpp": "class Solution {\npublic:\n    vector<string> generateParenthesis(int n) {\n        \n    }\n};",
       "java": "class Solution {\n    public List<String> generateParenthesis(int n) {\n        \n    }\n}",
-      "python": "class Solution(object):\n    def generateParenthesis(self, n):\n        \"\"\"\n        :type n: int\n        :rtype: List[str]\n        \"\"\"\n        ",
+      "python": "class Solution:\n    def generateParenthesis(self, n: int) -> list[str]:\n        ",
       "javascript": "/**\n * @param {number} n\n * @return {string[]}\n */\nvar generateParenthesis = function(n) {\n    \n};"
     },
     "examples": [
@@ -770,7 +770,7 @@
         "type": "list<string>"
       }
     },
-    "cacheVersion": 2
+    "cacheVersion": 3
   },
   "top-k-frequent-elements": {
     "id": "nc-347",
@@ -1041,6 +1041,214 @@
         },
         {
           "name": "k",
+          "type": "integer"
+        }
+      ],
+      "return": {
+        "type": "integer"
+      }
+    },
+    "cacheVersion": 3
+  },
+  "longest-consecutive-sequence": {
+    "id": "nc-128",
+    "number": 128,
+    "title": "Longest Consecutive Sequence",
+    "difficulty": "Medium",
+    "contentHtml": "<p>Given an unsorted array of integers <code>nums</code>, return <em>the length of the longest consecutive elements sequence.</em></p>\n\n<p>You must write an algorithm that runs in&nbsp;<code>O(n)</code>&nbsp;time.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [100,4,200,1,3,2]\n<strong>Output:</strong> 4\n<strong>Explanation:</strong> The longest consecutive elements sequence is <code>[1, 2, 3, 4]</code>. Therefore its length is 4.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [0,3,7,2,5,8,4,6,0,1]\n<strong>Output:</strong> 9\n</pre>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [1,0,1,2]\n<strong>Output:</strong> 3\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>0 &lt;= nums.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>-10<sup>9</sup> &lt;= nums[i] &lt;= 10<sup>9</sup></code></li>\n</ul>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    int longestConsecutive(vector<int>& nums) {\n        \n    }\n};",
+      "java": "class Solution {\n    public int longestConsecutive(int[] nums) {\n        \n    }\n}",
+      "python": "class Solution:\n    def longestConsecutive(self, nums: list[int]) -> int:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar longestConsecutive = function(nums) {\n    \n};"
+    },
+    "examples": [
+      {
+        "input": "nums = [100,4,200,1,3,2]",
+        "output": "4",
+        "explanation": "The longest consecutive elements sequence is [1, 2, 3, 4]. Therefore its length is 4."
+      },
+      {
+        "input": "nums = [0,3,7,2,5,8,4,6,0,1]",
+        "output": "9",
+        "explanation": ""
+      },
+      {
+        "input": "nums = [1,0,1,2]",
+        "output": "3",
+        "explanation": ""
+      }
+    ],
+    "constraints": [
+      "0 <= nums.length <= 105",
+      "-109 <= nums[i] <= 109"
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "nums = [100,4,200,1,3,2]",
+        "args": [
+          "[100,4,200,1,3,2]"
+        ],
+        "expected": "4"
+      },
+      {
+        "id": 2,
+        "input": "nums = [0,3,7,2,5,8,4,6,0,1]",
+        "args": [
+          "[0,3,7,2,5,8,4,6,0,1]"
+        ],
+        "expected": "9"
+      },
+      {
+        "id": 3,
+        "input": "nums = [1,0,1,2]",
+        "args": [
+          "[1,0,1,2]"
+        ],
+        "expected": "3"
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "longestConsecutive",
+      "params": [
+        {
+          "name": "nums",
+          "type": "integer[]"
+        }
+      ],
+      "return": {
+        "type": "integer"
+      }
+    },
+    "cacheVersion": 3
+  },
+  "sliding-window-maximum": {
+    "id": "nc-239",
+    "number": 239,
+    "title": "Sliding Window Maximum",
+    "difficulty": "Hard",
+    "contentHtml": "<p>You are given an array of integers&nbsp;<code>nums</code>, there is a sliding window of size <code>k</code> which is moving from the very left of the array to the very right. You can only see the <code>k</code> numbers in the window. Each time the sliding window moves right by one position.</p>\n\n<p>Return <em>the max sliding window</em>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [1,3,-1,-3,5,3,6,7], k = 3\n<strong>Output:</strong> [3,3,5,5,6,7]\n<strong>Explanation:</strong> \nWindow position                Max\n---------------               -----\n[1  3  -1] -3  5  3  6  7       <strong>3</strong>\n 1 [3  -1  -3] 5  3  6  7       <strong>3</strong>\n 1  3 [-1  -3  5] 3  6  7      <strong> 5</strong>\n 1  3  -1 [-3  5  3] 6  7       <strong>5</strong>\n 1  3  -1  -3 [5  3  6] 7       <strong>6</strong>\n 1  3  -1  -3  5 [3  6  7]      <strong>7</strong>\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [1], k = 1\n<strong>Output:</strong> [1]\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= nums.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>-10<sup>4</sup> &lt;= nums[i] &lt;= 10<sup>4</sup></code></li>\n\t<li><code>1 &lt;= k &lt;= nums.length</code></li>\n</ul>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    vector<int> maxSlidingWindow(vector<int>& nums, int k) {\n        \n    }\n};",
+      "java": "class Solution {\n    public int[] maxSlidingWindow(int[] nums, int k) {\n        \n    }\n}",
+      "python": "class Solution:\n    def maxSlidingWindow(self, nums: list[int], k: int) -> list[int]:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @param {number} k\n * @return {number[]}\n */\nvar maxSlidingWindow = function(nums, k) {\n    \n};"
+    },
+    "examples": [
+      {
+        "input": "nums = [1,3,-1,-3,5,3,6,7], k = 3",
+        "output": "[3,3,5,5,6,7]",
+        "explanation": "Window position                Max\n---------------               -----\n[1  3  -1] -3  5  3  6  7       3\n 1 [3  -1  -3] 5  3  6  7       3\n 1  3 [-1  -3  5] 3  6  7       5\n 1  3  -1 [-3  5  3] 6  7       5\n 1  3  -1  -3 [5  3  6] 7       6\n 1  3  -1  -3  5 [3  6  7]      7"
+      },
+      {
+        "input": "nums = [1], k = 1",
+        "output": "[1]",
+        "explanation": ""
+      }
+    ],
+    "constraints": [
+      "1 <= nums.length <= 105",
+      "-104 <= nums[i] <= 104",
+      "1 <= k <= nums.length"
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "nums = [1,3,-1,-3,5,3,6,7]\nk = 3",
+        "args": [
+          "[1,3,-1,-3,5,3,6,7]",
+          "3"
+        ],
+        "expected": "[3,3,5,5,6,7]"
+      },
+      {
+        "id": 2,
+        "input": "nums = [1]\nk = 1",
+        "args": [
+          "[1]",
+          "1"
+        ],
+        "expected": "[1]"
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "maxSlidingWindow",
+      "params": [
+        {
+          "name": "nums",
+          "type": "integer[]"
+        },
+        {
+          "name": "k",
+          "type": "integer"
+        }
+      ],
+      "return": {
+        "type": "integer[]"
+      }
+    },
+    "cacheVersion": 3
+  },
+  "task-scheduler": {
+    "id": "nc-621",
+    "number": 621,
+    "title": "Task Scheduler",
+    "difficulty": "Medium",
+    "contentHtml": "<p>You are given an array of CPU <code>tasks</code>, each labeled with a letter from A to Z, and a number <code>n</code>. Each CPU interval can be idle or allow the completion of one task. Tasks can be completed in any order, but there&#39;s a constraint: there has to be a gap of <strong>at least</strong> <code>n</code> intervals between two tasks with the same label.</p>\n\n<p>Return the <strong>minimum</strong> number of CPU intervals required to complete all tasks.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<div class=\"example-block\" style=\"\n    border-color: var(--border-tertiary);\n    border-left-width: 2px;\n    color: var(--text-secondary);\n    font-size: .875rem;\n    margin-bottom: 1rem;\n    margin-top: 1rem;\n    overflow: visible;\n    padding-left: 1rem;\n\">\n<p><strong>Input:</strong> <span class=\"example-io\" style=\"\n    font-family: Menlo,sans-serif;\n    font-size: 0.85rem;\n\">tasks = [&quot;A&quot;,&quot;A&quot;,&quot;A&quot;,&quot;B&quot;,&quot;B&quot;,&quot;B&quot;], n = 2</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\" style=\"\nfont-family: Menlo,sans-serif;\nfont-size: 0.85rem;\n\">8</span></p>\n\n<p><strong>Explanation:</strong> A possible sequence is: A -&gt; B -&gt; idle -&gt; A -&gt; B -&gt; idle -&gt; A -&gt; B.</p>\n\n<p>After completing task A, you must wait two intervals before doing A again. The same applies to task B. In the 3<sup>rd</sup> interval, neither A nor B can be done, so you idle. By the 4<sup>th</sup> interval, you can do A again as 2 intervals have passed.</p>\n</div>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<div class=\"example-block\" style=\"\n    border-color: var(--border-tertiary);\n    border-left-width: 2px;\n    color: var(--text-secondary);\n    font-size: .875rem;\n    margin-bottom: 1rem;\n    margin-top: 1rem;\n    overflow: visible;\n    padding-left: 1rem;\n\">\n<p><strong>Input:</strong> <span class=\"example-io\" style=\"\n    font-family: Menlo,sans-serif;\n    font-size: 0.85rem;\n\">tasks = [&quot;A&quot;,&quot;C&quot;,&quot;A&quot;,&quot;B&quot;,&quot;D&quot;,&quot;B&quot;], n = 1</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\" style=\"\n    font-family: Menlo,sans-serif;\n    font-size: 0.85rem;\n\">6</span></p>\n\n<p><strong>Explanation:</strong> A possible sequence is: A -&gt; B -&gt; C -&gt; D -&gt; A -&gt; B.</p>\n\n<p>With a cooling interval of 1, you can repeat a task after just one other task.</p>\n</div>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<div class=\"example-block\" style=\"\n    border-color: var(--border-tertiary);\n    border-left-width: 2px;\n    color: var(--text-secondary);\n    font-size: .875rem;\n    margin-bottom: 1rem;\n    margin-top: 1rem;\n    overflow: visible;\n    padding-left: 1rem;\n\">\n<p><strong>Input:</strong> <span class=\"example-io\" style=\"\n    font-family: Menlo,sans-serif;\n    font-size: 0.85rem;\n\">tasks = [&quot;A&quot;,&quot;A&quot;,&quot;A&quot;, &quot;B&quot;,&quot;B&quot;,&quot;B&quot;], n = 3</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\" style=\"\n    font-family: Menlo,sans-serif;\n    font-size: 0.85rem;\n\">10</span></p>\n\n<p><strong>Explanation:</strong> A possible sequence is: A -&gt; B -&gt; idle -&gt; idle -&gt; A -&gt; B -&gt; idle -&gt; idle -&gt; A -&gt; B.</p>\n\n<p>There are only two types of tasks, A and B, which need to be separated by 3 intervals. This leads to idling twice between repetitions of these tasks.</p>\n</div>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= tasks.length &lt;= 10<sup>4</sup></code></li>\n\t<li><code>tasks[i]</code> is an uppercase English letter.</li>\n\t<li><code>0 &lt;= n &lt;= 100</code></li>\n</ul>\n",
+    "starterTemplates": {
+      "cpp": "class Solution {\npublic:\n    int leastInterval(vector<char>& tasks, int n) {\n        \n    }\n};",
+      "java": "class Solution {\n    public int leastInterval(char[] tasks, int n) {\n        \n    }\n}",
+      "python": "class Solution:\n    def leastInterval(self, tasks: list[str], n: int) -> int:\n        ",
+      "javascript": "/**\n * @param {character[]} tasks\n * @param {number} n\n * @return {number}\n */\nvar leastInterval = function(tasks, n) {\n    \n};"
+    },
+    "examples": [],
+    "constraints": [
+      "1 <= tasks.length <= 104",
+      "tasks[i] is an uppercase English letter.",
+      "0 <= n <= 100"
+    ],
+    "sampleTestCases": [
+      {
+        "id": 1,
+        "input": "tasks = [\"A\",\"A\",\"A\",\"B\",\"B\",\"B\"]\nn = 2",
+        "args": [
+          "[\"A\",\"A\",\"A\",\"B\",\"B\",\"B\"]",
+          "2"
+        ],
+        "expected": "8"
+      },
+      {
+        "id": 2,
+        "input": "tasks = [\"A\",\"C\",\"A\",\"B\",\"D\",\"B\"]\nn = 1",
+        "args": [
+          "[\"A\",\"C\",\"A\",\"B\",\"D\",\"B\"]",
+          "1"
+        ],
+        "expected": "6"
+      },
+      {
+        "id": 3,
+        "input": "tasks = [\"A\",\"A\",\"A\", \"B\",\"B\",\"B\"]\nn = 3",
+        "args": [
+          "[\"A\",\"A\",\"A\", \"B\",\"B\",\"B\"]",
+          "3"
+        ],
+        "expected": "10"
+      }
+    ],
+    "hiddenTestCases": [],
+    "meta": {
+      "name": "leastInterval",
+      "params": [
+        {
+          "name": "tasks",
+          "type": "character[]"
+        },
+        {
+          "name": "n",
           "type": "integer"
         }
       ],

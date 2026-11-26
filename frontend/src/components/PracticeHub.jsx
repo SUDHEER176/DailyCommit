@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ArrowRight, CalendarDays } from 'lucide-react';
 import PersonalizedPlannerView from './PersonalizedPlanner/PersonalizedPlannerView';
-import { takePlanPrefill } from '@/lib/planPrefill';
+import { takePlanPrefill, takeOpenProblem } from '@/lib/planPrefill';
 import CodeWorkspace from './CodeWorkspace/CodeWorkspace';
 import DailyProblemCard from './practice/DailyProblemCard';
 import RevisionQueueCard from './practice/RevisionQueueCard';
@@ -108,6 +108,13 @@ export default function PracticeHub({
   // Adaptive "Next up": refetched whenever the editor closes, since a solve changes the suggestion
   const nextUp = useNextProblem({ refreshKey: activeEditorProblem ? `editing-${activeEditorProblem.id}` : 'hub', enabled: !activeEditorProblem });
   const openSuggested = (problem) => openEditor(problem, { kind: 'next', id: problem.id });
+
+  // A problem clicked on the landing page's Today's plan sheets opens straight in the editor
+  useEffect(() => {
+    const picked = takeOpenProblem();
+    const problem = picked && PROBLEMS.find((p) => p.id === picked.id);
+    if (problem) openEditor(problem, { kind: picked.kind === 'review' ? 'review' : 'next', id: problem.id });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // An accepted submit in the editor: count the daily problem, or record the review
   const handleProblemSolved = async () => {

@@ -32,7 +32,7 @@ export default function TopicPicker({ onNavigate }) {
   return (
     <section id="topics" className="scroll-mt-24">
       <SectionHead title="Practice it topic by topic" caption="Pick a topic. Pick a level. Get its problems" />
-      <Panel className="p-5 sm:p-6">
+      <Panel className="p-4 sm:p-6">
         <p className="text-xs text-slate-500">1 · Topic</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {shown.map((t) => (

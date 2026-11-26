@@ -17,3 +17,23 @@ export function takePlanPrefill() {
     return null;
   }
 }
+
+// A problem picked on the landing page's Today's plan sheets, opened in the hub's editor.
+// { id, kind: 'plan' | 'review' }, read once like the plan answers above.
+const OPEN_KEY = 'codestreak_open_problem';
+
+export function setOpenProblem(id, kind) {
+  try { sessionStorage.setItem(OPEN_KEY, JSON.stringify({ id, kind })); } catch { /* storage blocked: the hub opens without it */ }
+}
+
+export function takeOpenProblem() {
+  try {
+    const raw = sessionStorage.getItem(OPEN_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(OPEN_KEY);
+    const v = JSON.parse(raw);
+    return v && typeof v.id === 'string' ? v : null;
+  } catch {
+    return null;
+  }
+}

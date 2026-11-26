@@ -59,7 +59,7 @@ export default function FaqSection() {
         </div>
       </div>
 
-      <Panel className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)] gap-4">
+      <Panel className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)] gap-4">
         <div {...rv(0)} className="flex md:flex-col gap-1 overflow-x-auto">
           {GROUPS.map((x, i) => (
             <button

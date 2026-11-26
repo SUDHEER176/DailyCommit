@@ -18,7 +18,7 @@ export default function SheetsSection({ onNavigate }) {
   return (
     <section id="sheets" className="scroll-mt-24">
       <SectionHead title="Start with one list, branch out later" caption="DailyCode 150, language tracks and core CS" />
-      <Panel className="p-4 sm:p-5">
+      <Panel className="p-4 sm:p-6">
         <div {...rv(0)} className="flex flex-wrap gap-2" role="tablist" aria-label="Sheet categories">
           {TABS.map((t) => (
             <button

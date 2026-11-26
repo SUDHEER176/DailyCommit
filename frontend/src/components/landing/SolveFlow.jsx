@@ -108,7 +108,7 @@ export default function SolveFlow() {
   return (
     <section id="how-it-works" className="scroll-mt-24">
       <SectionHead title="One problem, start to finish" caption="Read, attempt, run, submit, score, revise" />
-      <Panel className="p-4 sm:p-5">
+      <Panel className="p-4 sm:p-6">
         <div {...rv(0)} className="flex flex-wrap gap-2" role="tablist" aria-label="Steps">
           {STEPS.map((s, i) => (
             <button

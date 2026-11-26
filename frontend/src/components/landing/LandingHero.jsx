@@ -1,199 +1,150 @@
-import React, { useState } from 'react';
-import { ArrowDown, Check } from 'lucide-react';
-import { setPlanPrefill } from '@/lib/planPrefill';
+import React, { useMemo, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
+import { setOpenProblem, setPlanPrefill } from '@/lib/planPrefill';
 import { PROBLEMS } from '@/lib/practice';
-import { Ink, useInkSheet } from './ink';
+import { generateScheduleClient } from '@/utils/schedulerEngine';
 
-// Tape colors, one per card
-const TAPE = ['#c9e4c5', '#f3d2a8', '#d8cdf0', '#bfe3dc'];
-
-// Each card writes its title in when it scrolls into view, then the rest follows
-function PaperCard({ i, tilt, title, children }) {
-  const ink = useInkSheet();
-  return (
-    <div {...ink} className="paper ink-sheet ink-stagger p-5 pt-6 h-full" style={{ transform: `rotate(${tilt}deg)`, '--tape': TAPE[i], '--i': i }}>
-      <span className="tape" aria-hidden />
-      <h3 className="font-hand text-[26px] leading-none text-slate-900 dark:text-white"><Ink>{title}</Ink></h3>
-      <div className="mt-4 ink-fade" style={{ '--at': '0.45s' }}>{children}</div>
-    </div>
-  );
-}
-
-const LEVELS = [['beginner', 'Beginner'], ['intermediate', 'Intermediate'], ['advanced', 'Advanced']];
+// The plan wizard's own choices, so every answer carries over to it
+const DAYS = [30, 45, 60];
 const HOURS = [1, 2, 3, 4, 5];
-const FINISH = [30, 45, 60];
+const LEVELS = ['beginner', 'intermediate', 'advanced'];
 
-/** Card 1: the plan wizard's first answers. Build opens the wizard in the hub with them filled in */
-function GoalsCard({ onNavigate }) {
-  const [a, setA] = useState({ level: 'intermediate', hours: 2, targetDays: 45 });
-  const set = (k, v) => setA((x) => ({ ...x, [k]: v }));
-  const chip = (on) =>
-    `h-7 px-2 rounded-md text-[13px] tabular-nums transition-colors ${
-      on ? 'text-slate-900 dark:text-white bg-slate-900/[0.06] dark:bg-white/[0.08]' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-    }`;
+const next = (list, v) => list[(list.indexOf(v) + 1) % list.length];
+// Small labels: sentence case, muted, figures in mono only where they're numbers
+const label = 'text-[13px] text-slate-500';
 
+/** An underlined word in the headline: tapping it steps to the next choice */
+function Word({ label, children, onTap }) {
   return (
-    <form
-      onSubmit={(e) => { e.preventDefault(); setPlanPrefill(a); onNavigate && onNavigate('/practice/dsa'); }}
-      aria-label="Your goals"
+    <button
+      type="button"
+      onClick={onTap}
+      aria-label={`${label}: ${children}. Tap to change`}
+      className="underline decoration-brand-500 decoration-2 sm:decoration-[3px] underline-offset-[0.12em] hover:decoration-brand-400 focus-visible:outline-none focus-visible:decoration-white transition-colors"
     >
-      <p className="text-xs text-slate-500">I am</p>
-      <div className="mt-1 flex flex-wrap gap-1" role="radiogroup" aria-label="Level">
-        {LEVELS.map(([v, l]) => (
-          <button key={v} type="button" role="radio" aria-checked={a.level === v} onClick={() => set('level', v)} className={`${chip(a.level === v)} inline-flex items-center gap-1`}>
-            {a.level === v && <Check className="w-3 h-3 text-brand-500" strokeWidth={2} />}
-            {l}
-          </button>
-        ))}
-      </div>
-      <p className="mt-4 text-xs text-slate-500">Hours a day</p>
-      <div className="mt-1 flex gap-1" role="radiogroup" aria-label="Hours a day">
-        {HOURS.map((h) => (
-          <button key={h} type="button" role="radio" aria-checked={a.hours === h} onClick={() => set('hours', h)} className={`${chip(a.hours === h)} w-8 px-0`}>{h}h</button>
-        ))}
-      </div>
-      <p className="mt-4 text-xs text-slate-500">Finish in</p>
-      <div className="mt-1 flex gap-1" role="radiogroup" aria-label="Finish in">
-        {FINISH.map((d) => (
-          <button key={d} type="button" role="radio" aria-checked={a.targetDays === d} onClick={() => set('targetDays', d)} className={chip(a.targetDays === d)}>{d} days</button>
-        ))}
-      </div>
-      <div className="mt-6 flex justify-center">
-        <button
-          type="submit"
-          className="relative font-hand text-[22px] leading-none h-11 px-8 rounded-[50%] text-slate-900 dark:text-white -rotate-2 hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-        >
-          <Ink at={0.9}>Build my plan</Ink>
-          {/* Circled by hand once the words are written: the loop overlaps where it started */}
-          <svg className="absolute -inset-1 w-[calc(100%+8px)] h-[calc(100%+8px)] overflow-visible text-slate-900/70 dark:text-white/80 pointer-events-none" viewBox="0 0 160 48" preserveAspectRatio="none" aria-hidden>
-            <path className="ink-circle" style={{ '--at': '1.5s' }} pathLength="1" d="M96 4.5C136 5.5 157 13 155 25C153 38 117 44.5 77 44C35 43.5 4 36 4.5 23.5C5 11 39 3.5 84 4C104 4.2 118 6 130 10" />
-          </svg>
-        </button>
-      </div>
-    </form>
-  );
-}
-
-// Card 2: an example first week in list order, one topic a day, Sunday for revision
-const WEEK = [
-  ['M', 'Arrays & Hashing', '2h'],
-  ['T', 'Arrays & Hashing', '2h'],
-  ['W', 'Two Pointers', '2h'],
-  ['T', 'Sliding Window', '2h'],
-  ['F', 'Stack', '2h'],
-  ['S', 'Binary Search', '2h'],
-  ['S', 'Revision', '1h'],
-];
-
-function WeekCard() {
-  return (
-    <div>
-      <div className="flex items-center gap-1 text-xs">
-        <span className="h-6 px-2 grid place-items-center rounded-md bg-slate-900/[0.06] dark:bg-white/[0.08] text-slate-900 dark:text-white">Week 1</span>
-        <span className="px-2 text-slate-500">W2</span>
-        <span className="px-1 text-slate-500">W3 … W7</span>
-      </div>
-      <ul className="mt-3 divide-y divide-slate-900/[0.06] dark:divide-white/[0.06]">
-        {WEEK.map(([d, t, h], i) => (
-          <li key={i} className="flex items-center gap-3 h-8 text-[13px]">
-            <span className="w-3 font-mono text-[11px] text-slate-500">{d}</span>
-            <span className={`flex-1 truncate ${t === 'Revision' ? 'font-hand text-[18px] text-slate-500' : 'text-slate-800 dark:text-slate-200'}`}>{t === 'Revision' ? <Ink at={1}>{t}</Ink> : t}</span>
-            <span className="font-mono text-[11px] text-slate-500 tabular-nums">{h}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// Card 3: today's problems, the first three of the list
-const TODAY = PROBLEMS.slice(0, 3);
-const DIFF = { Easy: 'text-emerald-600 dark:text-emerald-400', Medium: 'text-amber-600 dark:text-amber-400', Hard: 'text-rose-600 dark:text-rose-400' };
-
-function TodayCard() {
-  return (
-    <ul className="space-y-3">
-      {TODAY.map((p, i) => (
-        <li key={p.id} className="flex items-start gap-3">
-          <span className={`mt-0.5 grid place-items-center w-4 h-4 shrink-0 rounded border ${i === 0 ? 'bg-brand-500 border-brand-500' : 'border-slate-400 dark:border-white/30'}`} aria-hidden>
-            {i === 0 && <Check className="on-dark w-3 h-3 text-white" strokeWidth={2.5} />}
-          </span>
-          <span className="min-w-0">
-            <span className={`block text-[13px] leading-5 ${i === 0 ? 'text-slate-500 line-through decoration-slate-400' : 'text-slate-800 dark:text-slate-200'}`}>{p.title}</span>
-            <span className={`text-[11px] ${DIFF[p.difficulty]}`}>{p.difficulty}</span>
-          </span>
-        </li>
-      ))}
-      <li className="pt-2 font-hand text-[20px] text-slate-500"><Ink at={0.9}>1 of 3 done, keep going</Ink></li>
-    </ul>
-  );
-}
-
-// Card 4: one problem's way back, with the review days as squares
-function RevisionCard() {
-  const marks = { 0: 'Solved', 3: 'Day 3', 7: 'Day 7', 21: 'Day 21' };
-  return (
-    <div>
-      <p className="text-[13px] text-slate-800 dark:text-slate-200">Group Anagrams</p>
-      <p className="text-[11px] text-slate-500">Needed a hint, so it comes back</p>
-      <div className="mt-4 grid grid-cols-7 gap-1" aria-label="Solved today, then reviews on day 3, 7 and 21">
-        {Array.from({ length: 28 }, (_, d) => (
-          <span key={d} className="cell !w-full !h-auto aspect-square !rounded-[3px]" data-level={d === 0 ? 4 : marks[d] ? 3 : 0} title={marks[d]} />
-        ))}
-      </div>
-      <ul className="mt-4 space-y-1 font-hand text-[19px] leading-tight text-slate-700 dark:text-slate-300">
-        <li><Ink at={0.8}>Day 3, a quick look</Ink></li>
-        <li><Ink at={1.5}>Day 7, solve it again</Ink></li>
-        <li><Ink at={2.2}>Day 21, it sticks</Ink></li>
-      </ul>
-    </div>
+      {children}
+    </button>
   );
 }
 
 /**
- * Landing hero: a centered headline and two actions, then four taped paper cards that walk
- * through goals, the week, today and revision.
+ * Landing hero: the headline is the plan itself ("My interview is in 45 days, I can study
+ * 2 hours a day, and I'm intermediate"), with the underlined words tappable. Under it, the plan
+ * those answers make, worked out live by the same scheduler as the plan wizard: problems a day,
+ * the finish date, every day as a tick (review days taller), and day one's problems.
  */
 export default function LandingHero({ onNavigate }) {
+  const [a, setA] = useState({ targetDays: 45, hours: 2, level: 'intermediate' });
+  const go = (path) => onNavigate && onNavigate(path);
+  const build = () => { setPlanPrefill(a); go('/practice/dsa'); };
+
+  const plan = useMemo(
+    () => generateScheduleClient({ questions: PROBLEMS, level: a.level, dailyHours: a.hours, targetDays: a.targetDays }),
+    [a.level, a.hours, a.targetDays]
+  );
+
+  const studyDays = plan.days.filter((d) => d.questions.length > 0).length || 1;
+  const perDay = Math.round(plan.totalQuestions / studyDays);
+  const minutesEach = Math.round((a.hours * 60) / Math.max(1, perDay));
+  const finish = new Date(`${plan.estimatedCompletionDate}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+
+  const today = new Date();
+  const interview = new Date(today.getFullYear(), today.getMonth(), today.getDate() + a.targetDays);
+  const short = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  const first = plan.days[0]?.questions || [];
+
   return (
-    <section className="hero-screen flex flex-col pt-6 sm:pt-10">
-      <div className="text-center animate-fadeIn">
-        <p className="inline-flex items-center h-7 px-3 rounded-full bg-brand-500/10 text-[13px] text-brand-600 dark:text-brand-400">
-          DSA interview prep, one day at a time
+    <section className="land-col pt-8 sm:pt-12" aria-label="Plan your prep">
+      <div className="flex items-center justify-between gap-6">
+        <p className={label}>DSA interview prep, one day at a time</p>
+        <p className={`${label} hidden sm:block`}>Tap the underlined words to change them</p>
+      </div>
+
+      {/* The headline is the question: tap a word to change it */}
+      <h1 className="mt-6 font-hand font-semibold text-[46px] sm:text-[68px] lg:text-[84px] leading-[1.05] text-[#1a1a17] dark:text-[#eeebe3]">
+        My interview is in{' '}
+        <Word label="Days until the interview" onTap={() => setA((x) => ({ ...x, targetDays: next(DAYS, x.targetDays) }))}>{a.targetDays} days</Word>, I can study{' '}
+        <Word label="Hours a day" onTap={() => setA((x) => ({ ...x, hours: next(HOURS, x.hours) }))}>{a.hours} {a.hours === 1 ? 'hour' : 'hours'}</Word>{' '}
+        a day, and I’m{' '}
+        <Word label="Level" onTap={() => setA((x) => ({ ...x, level: next(LEVELS, x.level) }))}>{a.level}</Word>.
+      </h1>
+
+      {/* What those answers make, and the two ways on */}
+      <div className="mt-6 sm:mt-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <p className="max-w-xl text-[15px] sm:text-[17px] leading-[1.65] text-slate-500 dark:text-slate-400" aria-live="polite">
+          That’s <span className="whitespace-nowrap text-slate-900 dark:text-white">{perDay} problems a day</span>, about {minutesEach} minutes each.
+          All {plan.totalQuestions} done by <span className="whitespace-nowrap text-slate-900 dark:text-white">{finish}</span>, with every fifth day kept for what you’re about to forget.
+          {plan.warning && <span className="block mt-2 text-[15px] text-amber-700 dark:text-amber-400">That pace needs more than {a.hours} {a.hours === 1 ? 'hour' : 'hours'} a day. Tap the days or hours to ease it</span>}
         </p>
-        <h1 className="mt-4 text-[36px] sm:text-[52px] leading-[1.08] font-medium tracking-[-0.03em] text-slate-900 dark:text-white">
-          Interview date set? Let’s plan it
-        </h1>
-        <p className="mt-3 text-lg sm:text-2xl text-slate-500 dark:text-slate-400">
-          A daily DSA plan that remembers what you’ll forget
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => document.getElementById('compare')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            className="btn-primary-glow inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[15px] font-medium transition-[background-color,transform] active:scale-[0.98]"
-          >
-            See what Pro adds
-            <ArrowDown className="w-4 h-4" strokeWidth={1.5} />
+        <div className="flex items-center gap-6 shrink-0">
+          <button type="button" onClick={() => go('/practice/dsa')} className="text-[14px] sm:text-[15px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+            Or just practice, free
           </button>
           <button
             type="button"
-            onClick={() => onNavigate && onNavigate('/practice/dsa')}
-            className="inline-flex items-center h-10 px-5 rounded-lg text-[15px] text-slate-900 dark:text-white border border-slate-300 dark:border-white/[0.14] hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors active:scale-[0.98]"
+            onClick={build}
+            className="inline-flex items-center gap-2 h-11 px-6 rounded-full text-[15px] font-medium text-white bg-[#1a1a17] hover:bg-black dark:text-[#1a1a17] dark:bg-[#eeebe3] dark:hover:bg-white on-dark transition-colors active:scale-[0.98]"
           >
-            Start practicing for free
+            Build my plan
+            <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
       </div>
 
-      {/* Fills the rest of the first screen, edge to edge, with the cards centered in it */}
-      <div className="mt-10 flex-1 flex items-center rounded-[24px] border border-slate-200 dark:border-white/[0.06] bg-slate-100/70 dark:bg-ink-850 px-5 py-10 sm:px-8">
-        <div className="land-col w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
-          <PaperCard i={0} tilt={-2} title="Your goals"><GoalsCard onNavigate={onNavigate} /></PaperCard>
-          <PaperCard i={1} tilt={1.5} title="Your week"><WeekCard /></PaperCard>
-          <PaperCard i={2} tilt={-1} title="Today"><TodayCard /></PaperCard>
-          <PaperCard i={3} tilt={2} title="Comes back"><RevisionCard /></PaperCard>
+      {/* Every day of the plan as a tick: today blue, review days tall, practice days short */}
+      <div className="mt-10 sm:mt-14">
+        <div className="flex items-center justify-between gap-4">
+          <p className={label}>Your {a.targetDays} days</p>
+          <ul className="hidden sm:flex items-center gap-6 text-[13px] text-slate-500">
+            <li className="flex items-center gap-2"><span className="w-px h-4 bg-slate-400 dark:bg-slate-600" />Practice</li>
+            <li className="flex items-center gap-2"><span className="w-[3px] h-4 bg-[#1a1a17] dark:bg-[#eeebe3]" />Review</li>
+            <li className="flex items-center gap-2"><span className="w-[3px] h-4 bg-brand-500" />Today</li>
+          </ul>
         </div>
+        <div className="mt-4 flex items-end justify-between h-14 border-b border-slate-200 dark:border-white/[0.08]" aria-hidden>
+          {plan.days.map((d, i) => (
+            <span
+              key={d.dayNumber}
+              title={`Day ${d.dayNumber}: ${d.isRevisionDay ? 'review' : `${d.questions.length} problems`}`}
+              className={`transition-[height,background-color] duration-300 ${
+                i === 0
+                  ? 'w-[3px] h-full bg-brand-500'
+                  : d.isRevisionDay
+                    ? 'w-[3px] h-[68%] bg-[#1a1a17] dark:bg-[#eeebe3]'
+                    : 'w-px h-[34%] bg-slate-300 dark:bg-slate-600'
+              }`}
+            />
+          ))}
+        </div>
+        <div className="mt-3 flex items-center justify-between text-[13px] tabular-nums text-slate-500">
+          <span>{short(today)} · today</span>
+          <span className="hidden sm:inline">Day {Math.ceil(plan.days.length / 2)}</span>
+          <span>{short(interview)} · interview</span>
+        </div>
+      </div>
+
+      {/* Day one's problems */}
+      <div className="mt-10 sm:mt-12">
+        <p className={`${label} pb-3 border-b border-slate-200 dark:border-white/[0.08]`}>Day 1</p>
+        <ol className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+          {first.slice(0, 3).map((q, i) => (
+            <li key={q.id}>
+              <button
+                type="button"
+                onClick={() => { setOpenProblem(q.id, 'plan'); go('/practice/dsa'); }}
+                className="group text-left"
+              >
+                <span className="font-mono text-[13px] text-brand-600 dark:text-brand-400">{String(i + 1).padStart(2, '0')}</span>
+                <span className="mt-2 block text-[18px] sm:text-[19px] font-medium leading-[1.35] text-[#1a1a17] dark:text-[#eeebe3] group-hover:underline decoration-1 underline-offset-4">
+                  {q.title}
+                </span>
+                <span className={`mt-1 block ${label}`}>{q.topic} · {q.difficulty}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+        {first.length > 3 && <p className={`mt-6 ${label}`}>+ {first.length - 3} more today</p>}
       </div>
     </section>
   );
